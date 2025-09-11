@@ -1,0 +1,10 @@
+{
+  "name": "Smart Health Water Alert",
+  "description": "An interactive web prototype of the 'Smart Health Water Alert' app for villagers and health workers in rural NE India. Features role-based dashboards, dynamic water quality status, symptom reporting, and health tips.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone",
+    "geolocation",
+    "bluetooth"
+  ]
+}
