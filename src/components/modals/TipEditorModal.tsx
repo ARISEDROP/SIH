@@ -103,5 +103,4 @@ const TipEditorModal: React.FC<TipEditorModalProps> = ({ isOpen, onClose, onSave
   );
 };
 
-// FIX: Added a default export to make the component compatible with React.lazy.
 export default React.memo(TipEditorModal);
