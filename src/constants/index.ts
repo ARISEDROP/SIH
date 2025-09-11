@@ -13,7 +13,6 @@ export const reportedSymptomsData: SymptomReport[] = [
     { id: 1, village: 'Pasighat', symptoms: 'Vomiting, Fever', reportedAt: '45m ago', resolved: false, notes: 'Started after drinking from the community well.' },
     { id: 2, village: 'Ziro', symptoms: 'Diarrhea', reportedAt: '2h ago', resolved: false },
     { id: 3, village: 'Daporijo', symptoms: 'Stomach Cramps', reportedAt: '5h ago', resolved: true },
-    // FIX: Changed 'name' to 'village' to match the SymptomReport type.
     { id: 4, village: 'Pasighat', symptoms: 'Fever', reportedAt: '1d ago', resolved: true },
 ];
 

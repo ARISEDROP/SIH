@@ -113,25 +113,27 @@ const WaterStatusCard: React.FC<WaterStatusCardProps> = ({ status, metrics, isCh
             </div>
         </div>
 
-        <div className="mt-6 pt-6 border-t border-slate-700/60">
-            <div className="flex items-center justify-center gap-2 mb-4">
-                <ClockIcon className="w-5 h-5 text-cyan-300" />
-                <h4 className="font-semibold text-cyan-300">Recent Quality Timeline</h4>
+        {history && history.length > 0 && (
+             <div className="mt-6 pt-6 border-t border-slate-700/60">
+                <div className="flex items-center justify-center gap-2 mb-4">
+                    <ClockIcon className="w-5 h-5 text-cyan-300" />
+                    <h4 className="font-semibold text-cyan-300">Recent Quality Timeline</h4>
+                </div>
+                <div className="relative flex justify-between items-center w-full max-w-sm mx-auto">
+                    <div className="absolute top-1/2 -translate-y-1/2 left-0 w-full h-0.5 bg-slate-700"></div>
+                    {history.map((item: QualityHistory, index) => (
+                        <div 
+                            key={index}
+                            className="relative text-center group"
+                            title={`Status on ${item.day}: ${item.status.charAt(0).toUpperCase() + item.status.slice(1)}`}
+                        >
+                            <div className={`w-4 h-4 rounded-full border-2 border-slate-600 ${timelineDotColor[item.status]} transition-transform duration-200 group-hover:scale-125`}></div>
+                            <p className="text-xs text-gray-400 mt-2">{item.day}</p>
+                        </div>
+                    ))}
+                </div>
             </div>
-            <div className="relative flex justify-between items-center w-full max-w-sm mx-auto">
-                <div className="absolute top-1/2 -translate-y-1/2 left-0 w-full h-0.5 bg-slate-700"></div>
-                {history.map((item: QualityHistory, index) => (
-                    <div 
-                        key={index}
-                        className="relative text-center group"
-                        title={`Status on ${item.day}: ${item.status.charAt(0).toUpperCase() + item.status.slice(1)}`}
-                    >
-                        <div className={`w-4 h-4 rounded-full border-2 border-slate-600 ${timelineDotColor[item.status]} transition-transform duration-200 group-hover:scale-125`}></div>
-                        <p className="text-xs text-gray-400 mt-2">{item.day}</p>
-                    </div>
-                ))}
-            </div>
-        </div>
+        )}
       </div>
        <div className="bg-slate-800/50 px-6 py-2 text-xs text-gray-400 text-center sm:text-right">
         Last synced: <span className="font-semibold text-gray-300">Just now</span>
