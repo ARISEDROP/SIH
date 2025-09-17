@@ -1,7 +1,10 @@
 import React from 'react';
 import Modal from './Modal';
 import { WaterScanResult, WaterStatus } from '../../types';
-import { ShieldCheckIcon, AlertTriangleIcon, AlertOctagonIcon, LightBulbIcon } from '../common/icons';
+import { ShieldCheckIcon, AlertTriangleIcon, AlertOctagonIcon, LightBulbIcon, SpeakerIcon } from '../common/icons';
+import { useAppContext } from '../../context/AppContext';
+import { translateText } from '../../services/gemini';
+import { speakText } from '../../services/voice';
 
 interface WaterScanResultModalProps {
   isOpen: boolean;
@@ -17,15 +20,46 @@ const statusConfig: { [key in WaterStatus]: { icon: React.ReactElement<any>; tex
 };
 
 const WaterScanResultModal: React.FC<WaterScanResultModalProps> = ({ isOpen, onClose, result, onLogConcern }) => {
+  const { language } = useAppContext();
+  
   if (!result) return null;
 
   const config = statusConfig[result.status];
   const notesForLog = `Water quality scan for ${result.userName} showed a status of '${result.status}'. AI Explanation: "${result.explanation}"`;
 
+  const handleSpeak = async () => {
+    const textToSpeak = `
+      Water status is ${result.status}. 
+      AI Explanation: ${result.explanation}. 
+      Recommendations: ${result.recommendations.join('. ')}
+    `;
+    let translatedText = textToSpeak;
+    if (language !== 'en-US') {
+        translatedText = await translateText(textToSpeak, language);
+    }
+    await speakText(translatedText, language);
+  };
+
+  const handleClose = () => {
+    if (window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+    }
+    onClose();
+  };
+
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="AI Water Quality Report">
+    <Modal isOpen={isOpen} onClose={handleClose} title="AI Water Quality Report">
       <div className="p-6 space-y-4">
-        <p className="text-sm text-gray-400">Report generated for <span className="font-bold text-white">{result.userName}</span> on {result.timestamp}</p>
+        <div className="flex justify-between items-start">
+            <p className="text-sm text-gray-400 pr-4">Report for <span className="font-bold text-white">{result.userName}</span> on {result.timestamp}</p>
+            <button
+                onClick={handleSpeak}
+                aria-label="Read report aloud"
+                className="flex-shrink-0 p-2 bg-slate-800/70 rounded-full text-cyan-300 hover:bg-slate-700/70 transition-colors focus:outline-none focus:ring-2 focus:ring-cyan-400"
+            >
+                <SpeakerIcon className="w-5 h-5" />
+            </button>
+        </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
           <img src={result.image} alt="Water sample" className="rounded-lg w-full h-48 object-cover border-2 border-slate-700" />

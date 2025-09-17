@@ -1,4 +1,5 @@
-import React, { useState, useMemo, useEffect, lazy, Suspense } from 'react';
+
+import React, { useState, useMemo, useEffect, lazy, Suspense, useCallback } from 'react';
 import Header from '../common/Header';
 import WaterStatusCard from '../dashboard/WaterStatusCard';
 import { PlusIcon, SparklesIcon, AlertOctagonIcon, SpeakerIcon, BookOpenIcon, ScannerIcon, CameraIcon, UserIcon } from '../common/icons';
@@ -23,8 +24,14 @@ const OutbreakAlertBanner: React.FC<OutbreakAlertBannerProps> = ({ diseaseName, 
     const alertText = `High alert for ${diseaseName} in your area. Please ensure water is boiled before consumption and wash hands frequently.`;
     
     useEffect(() => {
+        const playAlert = async () => {
+            let textToSpeak = await translateText(alertText, language);
+            await speakText(textToSpeak, language);
+        };
+        playAlert();
+        
         return () => { if (window.speechSynthesis) window.speechSynthesis.cancel(); };
-    }, []);
+    }, [diseaseName, language, alertText]);
 
     const handlePlayAlert = async () => {
         let textToSpeak = await translateText(alertText, language);
@@ -72,6 +79,18 @@ const VillagerDashboard: React.FC = () => {
 
   const highThreatDisease = useMemo(() => diseaseTrendsData.find(d => d.threatLevel === 'high'), []);
 
+  const playScanResultAlert = useCallback(async (status: WaterStatus) => {
+    if (status === 'unsafe' && !highThreatDisease) {
+        const alertText = "Warning. The water quality is now unsafe. High contamination levels detected. Do not drink this water.";
+        const textToSpeak = await translateText(alertText, language);
+        await speakText(textToSpeak, language);
+    } else if (status === 'caution') {
+        const alertText = "Caution advised. Contamination has been detected. It is recommended to boil water before use.";
+        const textToSpeak = await translateText(alertText, language);
+        await speakText(textToSpeak, language);
+    }
+  }, [highThreatDisease, language]);
+
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -94,8 +113,11 @@ const VillagerDashboard: React.FC = () => {
 
     const analysisResult = await analyzeWaterImage(imageBase64.split(',')[1], imageFile.type);
     
-    // Update main dashboard status based on scan
     const newStatus = analysisResult.status;
+
+    // Await the voice alert to ensure it plays before other UI updates can interrupt it.
+    await playScanResultAlert(newStatus);
+    
     const newMetrics = generateRandomMetrics(newStatus);
     setDescriptionOverride(analysisResult.explanation);
     setHistory(prev => prev.map(item => item.day === 'Today' ? { ...item, status: newStatus } : item));

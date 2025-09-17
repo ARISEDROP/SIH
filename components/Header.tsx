@@ -108,6 +108,7 @@ const Header: React.FC<HeaderProps> = ({
                             <option value="en-US">English</option>
                             <option value="hi-IN">हिन्दी (Hindi)</option>
                             <option value="ta-IN">தமிழ் (Tamil)</option>
+                            <option value="as-IN">অসমীয়া (Assamese)</option>
                         </select>
                          <ChevronDownIcon className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
                     </div>

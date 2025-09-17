@@ -1,4 +1,3 @@
-
 // A self-contained module for robust, high-quality text-to-speech.
 
 let loadedVoices: SpeechSynthesisVoice[] = [];
@@ -57,6 +56,7 @@ export const speakText = async (text: string, lang: string = 'en-US'): Promise<v
         'en-US': ['Google US English', 'Samantha', 'Alex', 'Microsoft Zira Desktop - English (United States)'],
         'hi-IN': ['Google हिन्दी', 'Isha', 'Microsoft Kalpana Desktop - Indian (Hindi)'],
         'ta-IN': ['Google தமிழ்', 'Microsoft Valluvar Desktop - Indian (Tamil)'],
+        'as-IN': ['Google অসমীয়া'],
     };
 
     let selectedVoice: SpeechSynthesisVoice | undefined;

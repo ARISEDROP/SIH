@@ -236,6 +236,7 @@ export async function translateText(text: string, targetLang: string): Promise<s
     const languageMap: { [key: string]: string } = {
         'hi-IN': 'Hindi',
         'ta-IN': 'Tamil',
+        'as-IN': 'Assamese',
     };
     const targetLanguageName = languageMap[targetLang];
     if (!targetLanguageName || targetLang === 'en-US') return text;
