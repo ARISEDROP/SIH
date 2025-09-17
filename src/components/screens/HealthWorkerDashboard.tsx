@@ -19,7 +19,7 @@ const MAP_BOUNDS = {
     lat: { min: 26.5, max: 28.5 },
     lng: { min: 91.5, max: 96.5 },
 };
-const LOCATION_SMOOTHING_FACTOR = 0.5; // Alpha for EMA filter (0.1 = heavy smoothing, 0.9 = light smoothing)
+const LOCATION_SMOOTHING_FACTOR = 0.5;
 
 
 const statusConfig: { [key in WaterStatus]: { icon: React.ReactElement<any>; textClass: string; bgClass: string; } } = {
@@ -38,7 +38,7 @@ const GeoBeaconPin: React.FC<{ status: WaterStatus; isSelected: boolean; isOnlin
 
     if (!isOnline) {
         return (
-            <svg width="48" height="48" viewBox="0 0 48 48" className="transition-transform duration-300 group-hover:scale-125 opacity-70">
+            <svg width="48" height="48" viewBox="0 0 48" className="transition-transform duration-300 group-hover:scale-125 opacity-70">
                 <g transform="translate(24, 24)" fill="none" stroke="rgba(148, 163, 184, 0.7)" strokeWidth="1.5">
                     <path d="M -10 12 L 10 12 L 8 18 L -8 18 Z" fill="rgba(100, 116, 139, 0.4)" stroke="none" />
                     <path d="M -4 18 L 4 18 L 4 20 L -4 20 Z" fill="rgba(71, 85, 105, 0.6)" stroke="none" />
@@ -63,7 +63,7 @@ const GeoBeaconPin: React.FC<{ status: WaterStatus; isSelected: boolean; isOnlin
     };
 
     return (
-        <svg width="48" height="48" viewBox="0 0 48 48" className="transition-transform duration-300 group-hover:scale-125" style={{ filter: isSelected ? `drop-shadow(0 0 10px ${color.glow})` : 'none' }}>
+        <svg width="48" height="48" viewBox="0 0 48" className="transition-transform duration-300 group-hover:scale-125" style={{ filter: isSelected ? `drop-shadow(0 0 10px ${color.glow})` : 'none' }}>
             <g className={animationClasses[status]}>
                 <circle cx="24" cy="24" r="16" fill="none" stroke={color.base} strokeWidth="1" strokeOpacity="0.5" strokeDasharray="2 4" />
                 <circle cx="24" cy="24" r="20" fill="none" stroke={color.base} strokeWidth="1" strokeOpacity="0.3" />
@@ -167,17 +167,13 @@ const HealthWorkerDashboard: React.FC = () => {
 
   useEffect(() => {
     let watchId: number;
-
     if (navigator.geolocation) {
         watchId = navigator.geolocation.watchPosition(
             (position) => {
                 const { latitude, longitude } = position.coords;
                 const newRawLocation = { lat: latitude, lng: longitude };
-
-                // Apply Exponential Moving Average (EMA) smoothing filter to reduce jitter
                 setCurrentUserLocation(prevLocation => {
-                    if (!prevLocation) return newRawLocation; // First reading, no smoothing
-                    
+                    if (!prevLocation) return newRawLocation;
                     const smoothedLat = LOCATION_SMOOTHING_FACTOR * newRawLocation.lat + (1 - LOCATION_SMOOTHING_FACTOR) * prevLocation.lat;
                     const smoothedLng = LOCATION_SMOOTHING_FACTOR * newRawLocation.lng + (1 - LOCATION_SMOOTHING_FACTOR) * prevLocation.lng;
                     return { lat: smoothedLat, lng: smoothedLng };
@@ -186,31 +182,14 @@ const HealthWorkerDashboard: React.FC = () => {
             },
             (error) => {
                 console.error("Geolocation error:", error);
-                switch (error.code) {
-                    case error.PERMISSION_DENIED:
-                        setLocationError("Location access was denied. Please enable it in your browser settings.");
-                        break;
-                    case error.POSITION_UNAVAILABLE:
-                        setLocationError("Location information is currently unavailable.");
-                        break;
-                    default:
-                        setLocationError("An error occurred while getting your location.");
-                        break;
-                }
+                setLocationError("Could not get your location.");
             },
-            {
-                enableHighAccuracy: true,
-                timeout: 10000,
-                maximumAge: 0
-            }
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
         );
     } else {
         setLocationError("Geolocation is not supported by this browser.");
     }
-
-    return () => {
-        if (watchId) navigator.geolocation.clearWatch(watchId);
-    };
+    return () => { if (watchId) navigator.geolocation.clearWatch(watchId); };
   }, []);
 
   const convertLatLngToPercent = useCallback((lat: number, lng: number) => {
@@ -220,14 +199,14 @@ const HealthWorkerDashboard: React.FC = () => {
   }, []);
 
   const calculateDistance = useCallback((lat1: number, lon1: number, lat2: number, lon2: number) => {
-    const R = 6371; // Radius of the earth in km
+    const R = 6371; // km
     const dLat = (lat2 - lat1) * Math.PI / 180;
     const dLon = (lon2 - lon1) * Math.PI / 180;
     const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
               Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
               Math.sin(dLon / 2) * Math.sin(dLon / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return R * c; // Distance in km
+    return R * c;
   }, []);
   
   const calculateTransform = (position: {top: string, left: string}) => {
@@ -264,21 +243,15 @@ const HealthWorkerDashboard: React.FC = () => {
   }, [mapFilter, searchQuery]);
   
   const handleDownloadList = useCallback(() => {
-    if (villageData.length === 0) {
-      alert("No data to download.");
-      return;
-    }
+    if (villageData.length === 0) { alert("No data to download."); return; }
     const headers = ["ID", "Village Name", "Status", "Last Checked", "Latitude", "Longitude"];
-    const csvRows = [
-      headers.join(','),
-      ...villageData.map(v => [v.id, `"${v.name}"`, v.status, `"${v.lastChecked}"`, v.lat, v.lng].join(','))
-    ];
+    const csvRows = [ headers.join(','), ...villageData.map(v => [v.id, `"${v.name}"`, v.status, `"${v.lastChecked}"`, v.lat, v.lng].join(',')) ];
     const csvString = csvRows.join('\n');
     const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', `regional_water_quality_${new Date().toISOString().slice(0, 10)}.csv`);
+    link.href = url;
+    link.download = `regional_water_quality_${new Date().toISOString().slice(0, 10)}.csv`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -451,9 +424,11 @@ const HealthWorkerDashboard: React.FC = () => {
         
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             <div className="bg-slate-900/50 backdrop-blur-xl rounded-2xl shadow-lg border border-cyan-500/20 p-6">
-                <div className="flex items-center gap-3 mb-4">
-                    <UserGroupIcon className="text-cyan-400" />
-                    <h3 className="text-xl font-semibold text-cyan-300 tracking-wide">Community Health Log</h3>
+                <div className="flex justify-between items-center mb-4">
+                    <div className="flex items-center gap-3">
+                        <UserGroupIcon className="text-cyan-400" />
+                        <h3 className="text-xl font-semibold text-cyan-300 tracking-wide">Community Health Log</h3>
+                    </div>
                 </div>
                 <div className="overflow-y-auto max-h-96 pr-2">
                  {isLogLoading ? (
@@ -467,10 +442,14 @@ const HealthWorkerDashboard: React.FC = () => {
                     symptomsData.map(report => (
                         <div key={report.id} className={`p-4 rounded-lg mb-3 transition-colors ${report.resolved ? 'bg-slate-800/50' : 'bg-red-900/40 border border-red-500/30'}`}>
                             <div className="flex justify-between items-start">
-                                <div>
-                                    <p className={`font-bold ${report.resolved ? 'text-gray-400' : 'text-red-300'}`}>{report.village}</p>
-                                    <p className={`text-sm ${report.resolved ? 'text-gray-500' : 'text-white'}`}>{report.symptoms}</p>
-                                    {report.notes && <p className={`text-xs mt-1 italic ${report.resolved ? 'text-gray-600' : 'text-gray-400'}`}>"{report.notes}"</p>}
+                                <div className="flex items-start gap-3">
+                                    {report.userAvatar && <img src={report.userAvatar} alt={report.userName || ''} className="w-8 h-8 rounded-full flex-shrink-0" />}
+                                    <div>
+                                        <p className={`font-bold ${report.resolved ? 'text-gray-400' : 'text-red-300'}`}>{report.village}</p>
+                                        {report.userName && <p className={`text-xs ${report.resolved ? 'text-gray-500' : 'text-gray-300'}`}>{report.userName}</p>}
+                                        <p className={`text-sm mt-1 ${report.resolved ? 'text-gray-500' : 'text-white'}`}>{report.symptoms}</p>
+                                        {report.notes && <p className={`text-xs mt-1 italic ${report.resolved ? 'text-gray-600' : 'text-gray-400'}`}>"{report.notes}"</p>}
+                                    </div>
                                 </div>
                                 <div className="text-right flex-shrink-0 ml-4">
                                     <p className={`text-xs ${report.resolved ? 'text-gray-500' : 'text-gray-300'}`}>{report.reportedAt}</p>

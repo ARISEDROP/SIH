@@ -25,6 +25,8 @@ export interface SymptomReport {
   photo?: string; // base64 encoded image
   reportedAt: string;
   resolved: boolean;
+  userName?: string;
+  userAvatar?: string;
 }
 
 export interface Tip {
@@ -71,4 +73,13 @@ export interface SensorData {
 export interface SensorHealth {
     status: 'good' | 'warning' | 'error';
     message: string;
+}
+
+export interface WaterScanResult {
+  status: WaterStatus;
+  explanation: string;
+  recommendations: string[];
+  image: string; // base64
+  userName: string;
+  timestamp: string;
 }

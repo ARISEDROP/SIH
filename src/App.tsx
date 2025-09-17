@@ -35,6 +35,7 @@ const App: React.FC = () => {
     exportLog,
     restoreLog,
     clearLog,
+    exportPdfReport,
     hardwareConnect,
     hardwareDisconnect,
     openAboutModal,
@@ -111,6 +112,7 @@ const App: React.FC = () => {
             onExport={exportLog}
             onRestore={restoreLog}
             onClear={clearLog}
+            onExportPdf={exportPdfReport}
         />}
          {isHardwareModalOpen && role === 'health_worker' && <HardwareIntegrationModal
             isOpen={isHardwareModalOpen}

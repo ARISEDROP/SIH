@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import Modal from './Modal';
 import { SyncIcon, CameraIcon, ThermometerIcon, StomachIcon, HeadacheIcon } from '../common/icons';
 import { commonSymptoms } from '../../constants';
@@ -9,6 +9,7 @@ interface SymptomsFormModalProps {
   onClose: () => void;
   onSubmit: (data: Omit<SymptomReport, 'id' | 'reportedAt' | 'resolved'>) => void;
   userVillage: string;
+  initialNotes?: string;
 }
 
 const iconMap = {
@@ -17,13 +18,19 @@ const iconMap = {
     HeadacheIcon,
 };
 
-const SymptomsFormModal: React.FC<SymptomsFormModalProps> = ({ isOpen, onClose, onSubmit, userVillage }) => {
+const SymptomsFormModal: React.FC<SymptomsFormModalProps> = ({ isOpen, onClose, onSubmit, userVillage, initialNotes = '' }) => {
   const [selectedSymptoms, setSelectedSymptoms] = useState<string[]>([]);
-  const [notes, setNotes] = useState('');
+  const [notes, setNotes] = useState(initialNotes);
   const [photo, setPhoto] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      setNotes(initialNotes);
+    }
+  }, [isOpen, initialNotes]);
 
   const toggleSymptom = (symptomName: string) => {
     setSelectedSymptoms(prev =>
@@ -61,8 +68,8 @@ const SymptomsFormModal: React.FC<SymptomsFormModalProps> = ({ isOpen, onClose, 
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (selectedSymptoms.length === 0) {
-        alert("Please select at least one symptom.");
+    if (selectedSymptoms.length === 0 && !notes) {
+        alert("Please select at least one symptom or add notes.");
         return;
     }
     setIsSubmitting(true);
@@ -107,7 +114,7 @@ const SymptomsFormModal: React.FC<SymptomsFormModalProps> = ({ isOpen, onClose, 
       ) : (
         <form onSubmit={handleSubmit} className="space-y-6 p-6">
           <div>
-            <label className="block text-sm font-medium text-cyan-200 mb-2">Which symptoms are you experiencing?</label>
+            <label className="block text-sm font-medium text-cyan-200 mb-2">Which symptoms are you experiencing? (Optional if notes are added)</label>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               {commonSymptoms.map((symptom) => {
                 const IconComponent = iconMap[symptom.iconName];
@@ -132,13 +139,14 @@ const SymptomsFormModal: React.FC<SymptomsFormModalProps> = ({ isOpen, onClose, 
           </div>
           
           <div>
-            <label htmlFor="notes" className="block text-sm font-medium text-cyan-200">Additional Notes (Optional)</label>
+            <label htmlFor="notes" className="block text-sm font-medium text-cyan-200">Additional Notes</label>
             <textarea 
                 id="notes" 
-                rows={2}
+                rows={3}
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 className="mt-1 block w-full bg-slate-800/60 border border-slate-700 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-cyan-500 focus:border-cyan-500"
+                placeholder="e.g., Noticed cloudy water from the community well..."
             ></textarea>
           </div>
           

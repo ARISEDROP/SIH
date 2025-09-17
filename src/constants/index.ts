@@ -10,10 +10,10 @@ export const villageData: Village[] = [
 ];
 
 export const reportedSymptomsData: SymptomReport[] = [
-    { id: 1, village: 'Pasighat', symptoms: 'Vomiting, Fever', reportedAt: '45m ago', resolved: false, notes: 'Started after drinking from the community well.' },
-    { id: 2, village: 'Ziro', symptoms: 'Diarrhea', reportedAt: '2h ago', resolved: false },
-    { id: 3, village: 'Daporijo', symptoms: 'Stomach Cramps', reportedAt: '5h ago', resolved: true },
-    { id: 4, village: 'Pasighat', symptoms: 'Fever', reportedAt: '1d ago', resolved: true },
+    { id: 1, village: 'Pasighat', symptoms: 'Vomiting, Fever', reportedAt: '45m ago', resolved: false, notes: 'Started after drinking from the community well.', userName: 'Rohan Das', userAvatar: 'https://i.pravatar.cc/150?u=rohandas' },
+    { id: 2, village: 'Ziro', symptoms: 'Diarrhea', reportedAt: '2h ago', resolved: false, userName: 'Priya Rai', userAvatar: 'https://i.pravatar.cc/150?u=priyarai' },
+    { id: 3, village: 'Daporijo', symptoms: 'Stomach Cramps', reportedAt: '5h ago', resolved: true, userName: 'Anjali Tamang', userAvatar: 'https://i.pravatar.cc/150?u=anjalitamang' },
+    { id: 4, village: 'Pasighat', symptoms: 'Fever', reportedAt: '1d ago', resolved: true, userName: 'Vikram Singh', userAvatar: 'https://i.pravatar.cc/150?u=vikramsingh' },
 ];
 
 export const quickActionTips: Tip[] = [

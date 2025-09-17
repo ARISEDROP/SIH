@@ -58,7 +58,6 @@ export async function* streamGeminiResponse(prompt: string): AsyncGenerator<stri
     });
 
     for await (const chunk of response) {
-      // Ensure chunk and its text property exist before yielding
       if (chunk && chunk.text) {
         yield chunk.text;
       }
@@ -74,9 +73,9 @@ export async function* streamGeminiResponse(prompt: string): AsyncGenerator<stri
  * Analyzes an image of a water sample using Gemini.
  * @param imageDataBase64 - The base64 encoded image data.
  * @param mimeType - The MIME type of the image.
- * @returns An object with the status and an explanation.
+ * @returns An object with the status, an explanation, and actionable recommendations.
  */
-export async function analyzeWaterImage(imageDataBase64: string, mimeType: string): Promise<{ status: WaterStatus; explanation: string }> {
+export async function analyzeWaterImage(imageDataBase64: string, mimeType: string): Promise<{ status: WaterStatus; explanation: string; recommendations: string[] }> {
   try {
     const imagePart = {
       inlineData: {
@@ -85,7 +84,7 @@ export async function analyzeWaterImage(imageDataBase64: string, mimeType: strin
       },
     };
     const textPart = {
-      text: "Analyze this water sample image. Classify its quality as 'safe', 'caution', or 'unsafe' based on visual indicators like clarity, color, and visible particles. Provide a concise, one-sentence explanation for a villager that includes the observation and a likely cause. For example: 'This water appears clear and safe for consumption.', 'This water is slightly cloudy, likely from recent rainfall, so boiling is recommended.', 'This water is discolored and has particles, suggesting contamination from runoff; do not drink.'",
+      text: "Analyze this water sample image. Classify its quality as 'safe', 'caution', or 'unsafe' based on visual indicators like clarity, color, and visible particles. Provide a concise, one-sentence explanation for a villager. Also provide a short list of 2-3 simple, actionable recommendations as an array of strings. For example: ['Boil all water for 5 minutes before drinking.', 'Avoid using this water source for cooking.', 'Report this to your local health worker.']",
     };
 
     const response = await ai.models.generateContent({
@@ -104,8 +103,13 @@ export async function analyzeWaterImage(imageDataBase64: string, mimeType: strin
               type: Type.STRING,
               description: "A brief, one-sentence explanation for the classification."
             },
+            recommendations: {
+                type: Type.ARRAY,
+                items: { type: Type.STRING },
+                description: "A short list of 2-3 actionable recommendations for the user."
+            }
           },
-          required: ["status", "explanation"],
+          required: ["status", "explanation", "recommendations"],
         },
       },
     });
@@ -120,6 +124,11 @@ export async function analyzeWaterImage(imageDataBase64: string, mimeType: strin
         result.status = 'caution';
     }
 
+    if (!result.recommendations || !Array.isArray(result.recommendations)) {
+        console.warn(`Gemini returned invalid recommendations. Defaulting.`);
+        result.recommendations = ['Check with a health worker for next steps.'];
+    }
+
     return result;
 
   } catch (error) {
@@ -127,6 +136,7 @@ export async function analyzeWaterImage(imageDataBase64: string, mimeType: strin
     return {
       status: 'caution',
       explanation: 'Could not analyze image. Please try again with a clearer picture.',
+      recommendations: ['Ensure water is boiled before use.', 'Try taking another photo in better light.'],
     };
   }
 }
@@ -228,7 +238,7 @@ export async function translateText(text: string, targetLang: string): Promise<s
         'ta-IN': 'Tamil',
     };
     const targetLanguageName = languageMap[targetLang];
-    if (!targetLanguageName) return text; // If language not supported, return original text.
+    if (!targetLanguageName || targetLang === 'en-US') return text;
 
     const prompt = `Translate the following English text to ${targetLanguageName}. Provide only the translation, without any additional comments or labels.\n\nText: "${text}"`;
 
@@ -236,44 +246,12 @@ export async function translateText(text: string, targetLang: string): Promise<s
         const response = await ai.models.generateContent({
             model: "gemini-2.5-flash",
             contents: prompt,
-            config: {
-                temperature: 0.3,
-            }
+            config: { temperature: 0.3 }
         });
         return response.text.trim();
     } catch (error) {
         console.error(`Error translating text to ${targetLanguageName}:`, error);
-        return text; // Return original text on error
-    }
-}
-
-/**
- * Generates a geographical analysis of village water quality.
- * @param villages - The current village water status data.
- * @returns A string containing the AI-generated analysis.
- */
-export async function generateMapAnalysis(villages: Village[]): Promise<string> {
-    const prompt = `
-        As a public health AI analyst, review the following water quality data for several villages in a region.
-        Provide a brief, 2-3 sentence summary highlighting key geographical patterns, risk clusters, and urgent areas of concern.
-        Infer potential relationships based on village names if possible (e.g., proximity).
-        Your tone should be analytical and decisive, for a health worker.
-
-        Data: ${JSON.stringify(villages)}
-    `.trim();
-
-    try {
-        const response = await ai.models.generateContent({
-            model: "gemini-2.5-flash",
-            contents: prompt,
-            config: {
-                temperature: 0.7,
-            }
-        });
-        return response.text;
-    } catch (error) {
-        console.error("Error generating map analysis:", error);
-        return "Could not generate analysis. The AI service may be temporarily unavailable.";
+        return text;
     }
 }
 

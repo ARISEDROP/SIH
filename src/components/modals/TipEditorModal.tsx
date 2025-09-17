@@ -33,7 +33,6 @@ const TipEditorModal: React.FC<TipEditorModalProps> = ({ isOpen, onClose, onSave
     e.preventDefault();
     const stepsArray = steps.split('\n').filter(step => step.trim() !== '');
     const tipData = { icon, title, description, steps: stepsArray };
-    // FIX: Corrected typo 'tip' to 'tipToEdit' and completed the save logic.
     if (tipToEdit) {
       onSave({ ...tipData, id: tipToEdit.id });
     } else {
@@ -41,7 +40,6 @@ const TipEditorModal: React.FC<TipEditorModalProps> = ({ isOpen, onClose, onSave
     }
   };
 
-  // FIX: Completed the component by adding the return statement with JSX, which was missing.
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={tipToEdit ? 'Edit Tip' : 'Add New Tip'}>
       <form onSubmit={handleSubmit} className="space-y-4 p-6">

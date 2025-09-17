@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import Modal from './Modal';
-import { HardDriveIcon, TrashIcon, DownloadIcon, UploadIcon, SyncIcon } from '../common/icons';
+import { HardDriveIcon, TrashIcon, DownloadIcon, UploadIcon, SyncIcon, FileTextIcon } from '../common/icons';
 
 interface StorageManagerModalProps {
   isOpen: boolean;
@@ -9,6 +9,7 @@ interface StorageManagerModalProps {
   onExport: () => void;
   onRestore: (file: File) => void;
   onClear: () => void;
+  onExportPdf: () => void;
 }
 
 const STORAGE_LIMIT_MB = 200;
@@ -53,7 +54,7 @@ const CircularProgress: React.FC<{ percentage: number }> = ({ percentage }) => {
 };
 
 
-const StorageManagerModal: React.FC<StorageManagerModalProps> = ({ isOpen, onClose, storageUsage, onExport, onRestore, onClear }) => {
+const StorageManagerModal: React.FC<StorageManagerModalProps> = ({ isOpen, onClose, storageUsage, onExport, onRestore, onClear, onExportPdf }) => {
     const [activeTab, setActiveTab] = useState<'internal' | 'external'>('internal');
     const [isClearing, setIsClearing] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -120,7 +121,7 @@ const StorageManagerModal: React.FC<StorageManagerModalProps> = ({ isOpen, onClo
                 <div className="mt-6">
                     <div className="bg-slate-800/50 p-1 rounded-xl flex border border-slate-700">
                         <TabButton tab="internal">Internal Storage</TabButton>
-                        <TabButton tab="external">External Storage</TabButton>
+                        <TabButton tab="external">Export &amp; Import</TabButton>
                     </div>
                     <div className="mt-4 p-4 bg-slate-900/40 rounded-lg min-h-[150px]">
                         {activeTab === 'internal' ? (
@@ -140,23 +141,30 @@ const StorageManagerModal: React.FC<StorageManagerModalProps> = ({ isOpen, onClo
                             </div>
                         ) : (
                             <div className="animate-fade-in space-y-3" style={{animationDuration: '300ms'}}>
-                                <h4 className="font-semibold text-white mb-2">Backup & Restore</h4>
+                                <h4 className="font-semibold text-white mb-2">Export &amp; Import Data</h4>
                                 <p className="text-sm text-gray-400 mb-4">
-                                    Backup your data to a file for safekeeping, or restore from a previously saved backup file.
+                                    Export your data for safekeeping, or restore from a previously saved backup file.
                                 </p>
                                 <button
                                     onClick={onExport}
                                     className="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg bg-slate-700 text-white hover:bg-slate-600"
                                 >
                                     <DownloadIcon className="w-4 h-4" />
-                                    Backup Log to Device
+                                    Backup Log (JSON)
+                                </button>
+                                <button
+                                    onClick={onExportPdf}
+                                    className="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg bg-slate-700 text-white hover:bg-slate-600"
+                                >
+                                    <FileTextIcon className="w-4 h-4" />
+                                    Download PDF Report
                                 </button>
                                 <button
                                     onClick={handleRestoreClick}
                                     className="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg bg-slate-700 text-white hover:bg-slate-600"
                                 >
                                     <UploadIcon className="w-4 h-4" />
-                                    Restore Log from Device
+                                    Restore Log from Backup
                                 </button>
                                 <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept=".json"/>
                             </div>

@@ -3,6 +3,8 @@ import { SymptomReport, Tip } from '../types';
 const OFFLINE_REPORTS_KEY = 'offlineSymptomReports';
 const ALL_REPORTS_KEY = 'symptomReports';
 const TIPS_KEY = 'quickActionTips';
+const FORECAST_CACHE_KEY = 'aquaForecastCache';
+
 
 /**
  * A generic utility to save data to localStorage.
@@ -77,7 +79,7 @@ export const saveTips = (tips: Tip[]): void => {
  */
 export const getLocalStorageUsage = (): number => {
     let totalBytes = 0;
-    const keys = [OFFLINE_REPORTS_KEY, ALL_REPORTS_KEY, TIPS_KEY];
+    const keys = [OFFLINE_REPORTS_KEY, ALL_REPORTS_KEY, TIPS_KEY, FORECAST_CACHE_KEY];
     for (const key of keys) {
         const item = localStorage.getItem(key);
         if (item) {

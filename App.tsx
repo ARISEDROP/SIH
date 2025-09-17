@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect, useCallback, Suspense, lazy } from 'react';
+import jsPDF from 'jspdf';
 import { quickActionTips as initialTips, Tip, SymptomReport, reportedSymptomsData as initialSymptoms, Role, UserProfile } from './constants';
 import ConnectionStatusIndicator from './components/ConnectionStatusIndicator';
 import { 
@@ -185,6 +186,153 @@ const App: React.FC = () => {
     document.body.removeChild(linkElement);
     URL.revokeObjectURL(url);
   }, [symptomsData]);
+
+  const handleExportPdfReport = useCallback(() => {
+    if (symptomsData.length === 0) {
+        alert("No log data to export for PDF report.");
+        return;
+    }
+
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = 15;
+    let y = margin;
+
+    const addHeader = () => {
+        doc.setFontSize(22);
+        doc.setFont("helvetica", "bold");
+        doc.text("Community Health Log Report", pageWidth / 2, y, { align: 'center' });
+        y += 8;
+        doc.setFontSize(10);
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(100);
+        doc.text(`Generated on: ${new Date().toLocaleString()}`, pageWidth / 2, y, { align: 'center' });
+        doc.setTextColor(0);
+        y += 15;
+    };
+
+    const addFooter = () => {
+        const pageCount = (doc.internal as any).pages.length;
+        for (let i = 1; i <= pageCount; i++) {
+            doc.setPage(i);
+            doc.setFontSize(8);
+            doc.setTextColor(150);
+            doc.text(`Page ${i} of ${pageCount}`, pageWidth - margin, pageHeight - 10, { align: 'right' });
+        }
+    };
+    
+    addHeader();
+
+    const totalReports = symptomsData.length;
+    const resolvedReports = symptomsData.filter(r => r.resolved).length;
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.text("Overall Summary", margin, y);
+    y += 7;
+    doc.setFillColor(248, 250, 252);
+    doc.rect(margin, y, pageWidth - margin * 2, 15, 'F');
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "normal");
+    doc.text(`Total Reports: ${totalReports}`, margin + 5, y + 9);
+    doc.text(`Resolved: ${resolvedReports}`, margin + 70, y + 9);
+    doc.text(`Unresolved: ${totalReports - resolvedReports}`, margin + 120, y + 9);
+    y += 25;
+    
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.text("Detailed Log", margin, y);
+    y += 5;
+
+    symptomsData.forEach((report) => {
+        const contentWidth = pageWidth - margin * 2;
+        let startY = y;
+        let textY = startY + 10;
+        let textX = margin + 5;
+        let boxContentWidth = contentWidth - 10;
+        let photoHeight = 0;
+
+        if (report.photo) {
+            try {
+                const imgProps = doc.getImageProperties(report.photo);
+                const photoWidth = 60;
+                photoHeight = (imgProps.height * photoWidth) / imgProps.width;
+                photoHeight = Math.min(photoHeight, 80);
+                textX = margin + photoWidth + 10;
+                boxContentWidth = contentWidth - photoWidth - 15;
+            } catch (e) { console.error("Could not process image for PDF", e); }
+        }
+        
+        let textBlockHeight = 0;
+        const villageLines = doc.splitTextToSize(`${report.village} (${report.resolved ? "Resolved" : "Unresolved"})`, boxContentWidth);
+        textBlockHeight += villageLines.length * 5 + 5;
+        const symptomsLines = doc.splitTextToSize(`Symptoms: ${report.symptoms}`, boxContentWidth);
+        textBlockHeight += symptomsLines.length * 5;
+        if(report.notes) {
+            const notesLines = doc.splitTextToSize(`Notes: "${report.notes}"`, boxContentWidth);
+            textBlockHeight += notesLines.length * 5 + 2;
+        }
+        textBlockHeight += 8;
+
+        const boxHeight = Math.max(photoHeight + 10, textBlockHeight + 10);
+        
+        if (y + boxHeight > pageHeight - 20) {
+            doc.addPage();
+            y = margin;
+            startY = y;
+            textY = y + 10;
+        }
+
+        doc.setDrawColor(220, 220, 220);
+        doc.roundedRect(margin, y, contentWidth, boxHeight, 3, 3, 'S');
+
+        if (report.photo) {
+            try {
+                const format = report.photo.substring("data:image/".length, report.photo.indexOf(";base64")).toUpperCase();
+                if (['JPEG', 'PNG', 'WEBP'].includes(format)) {
+                    doc.addImage(report.photo, format, margin + 5, y + 5, 60, photoHeight);
+                } else {
+                     doc.addImage(report.photo, 'JPEG', margin + 5, y + 5, 60, photoHeight);
+                }
+            } catch (e) {
+                 doc.setFontSize(8).setTextColor(150,0,0).text("Image Error", margin + 5, y + 10);
+            }
+        }
+        
+        doc.setFontSize(12);
+        doc.setFont("helvetica", "bold");
+        if (report.resolved) doc.setTextColor(0, 100, 0); else doc.setTextColor(190, 0, 0);
+        doc.text(villageLines, textX, textY);
+        doc.setTextColor(0);
+        textY += villageLines.length * 5 + 5;
+        
+        doc.setFontSize(10);
+        doc.setFont("helvetica", "normal");
+        
+        doc.text(symptomsLines, textX, textY);
+        textY += symptomsLines.length * 5;
+
+        if (report.notes) {
+            textY += 2;
+            doc.setFont("helvetica", "italic");
+            doc.setTextColor(100);
+            const notesLines = doc.splitTextToSize(`Notes: "${report.notes}"`, boxContentWidth);
+            doc.text(notesLines, textX, textY);
+            doc.setTextColor(0);
+            textY += notesLines.length * 5;
+        }
+        
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(8).setTextColor(150).text(`Reported: ${report.reportedAt}`, textX, startY + boxHeight - 5);
+        doc.setTextColor(0);
+        
+        y += boxHeight + 5;
+    });
+
+    addFooter();
+    doc.save(`health_log_report_${new Date().toISOString().slice(0, 10)}.pdf`);
+  }, [symptomsData]);
+
 
   const handleRestoreLog = useCallback((file: File) => {
       const reader = new FileReader();
@@ -386,6 +534,7 @@ const App: React.FC = () => {
             onExport={handleExportLog}
             onRestore={handleRestoreLog}
             onClear={handleClearLog}
+            onExportPdf={handleExportPdfReport}
         />}
       </Suspense>
     </div>

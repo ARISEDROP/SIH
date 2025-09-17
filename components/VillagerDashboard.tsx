@@ -1,6 +1,6 @@
 
 
-import React, { useState, useMemo, useEffect, lazy, Suspense } from 'react';
+import React, { useState, useMemo, useEffect, lazy, Suspense, useCallback } from 'react';
 import Header from './Header';
 import WaterStatusCard from './WaterStatusCard';
 import { PlusIcon, SparklesIcon, AlertOctagonIcon, SpeakerIcon, BookOpenIcon, ScannerIcon, CameraIcon, XIcon } from './icons';
@@ -40,22 +40,25 @@ interface OutbreakAlertBannerProps {
 const OutbreakAlertBanner: React.FC<OutbreakAlertBannerProps> = ({ diseaseName, language }) => {
     const alertText = `High alert for ${diseaseName} in your area. Please ensure water is boiled before consumption and wash hands frequently.`;
     
+    const handlePlayAlert = useCallback(async () => {
+        let textToSpeak = alertText;
+        if (language !== 'en-US') {
+            textToSpeak = await translateText(alertText, language);
+        }
+        await speakText(textToSpeak, language);
+    }, [alertText, language]);
+
     useEffect(() => {
+        // Automatically play the alert when the banner appears.
+        handlePlayAlert();
+        
         // Cleanup function to stop speech synthesis when the banner is unmounted
         return () => {
             if (window.speechSynthesis) {
                 window.speechSynthesis.cancel();
             }
         };
-    }, []); // Empty dependency array ensures this runs only on mount and unmount
-
-    const handlePlayAlert = async () => {
-        let textToSpeak = alertText;
-        if (language !== 'en-US') {
-            textToSpeak = await translateText(alertText, language);
-        }
-        await speakText(textToSpeak, language);
-    };
+    }, [handlePlayAlert]);
 
     return (
         <div className="bg-red-900/80 backdrop-blur-md border border-red-500 rounded-2xl p-4 flex items-center gap-4 animate-pulse-glow" style={{'--glow-color': 'var(--red-rgb)'} as React.CSSProperties}>
@@ -172,6 +175,16 @@ const VillagerDashboard: React.FC<VillagerDashboardProps> = ({ onLogout, tips, o
         newStatus = availableStatuses[Math.floor(Math.random() * availableStatuses.length)] || 'safe';
         newMetrics = generateRandomMetrics(newStatus);
         setDescriptionOverride(null); // Clear override
+    }
+    
+    // Automatically play a generic "unsafe" alert if there is no specific outbreak alert.
+    if (newStatus === 'unsafe' && oldStatus !== 'unsafe' && !highThreatDisease) {
+        const alertText = "Warning. The water quality is now unsafe. High contamination levels detected. Do not drink this water.";
+        const playGenericAlert = async () => {
+            let textToSpeak = await translateText(alertText, language);
+            await speakText(textToSpeak, language);
+        };
+        playGenericAlert();
     }
     
     setHistory(prevHistory => 
