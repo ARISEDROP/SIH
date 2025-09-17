@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useEffect, lazy, Suspense, useCallback } from 'react';
 import Header from '../common/Header';
 import WaterStatusCard from '../dashboard/WaterStatusCard';
@@ -79,18 +78,6 @@ const VillagerDashboard: React.FC = () => {
 
   const highThreatDisease = useMemo(() => diseaseTrendsData.find(d => d.threatLevel === 'high'), []);
 
-  const playScanResultAlert = useCallback(async (status: WaterStatus) => {
-    if (status === 'unsafe' && !highThreatDisease) {
-        const alertText = "Warning. The water quality is now unsafe. High contamination levels detected. Do not drink this water.";
-        const textToSpeak = await translateText(alertText, language);
-        await speakText(textToSpeak, language);
-    } else if (status === 'caution') {
-        const alertText = "Caution advised. Contamination has been detected. It is recommended to boil water before use.";
-        const textToSpeak = await translateText(alertText, language);
-        await speakText(textToSpeak, language);
-    }
-  }, [highThreatDisease, language]);
-
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -105,6 +92,17 @@ const VillagerDashboard: React.FC = () => {
     }
   };
 
+  const playScanResultAlert = useCallback(async (result: { status: WaterStatus; recommendations: string[] }) => {
+    let alertTextPrefix = '';
+    if (result.status === 'unsafe' || result.status === 'caution') {
+      alertTextPrefix = 'Warning. ';
+    }
+    const alertText = `${alertTextPrefix}Water status is ${result.status}. Recommendations: ${result.recommendations.join('. ')}`;
+    const translatedText = await translateText(alertText, language);
+    await speakText(translatedText, language);
+  }, [language]);
+
+
   const handleStartScan = async () => {
     if (!imageBase64 || !imageFile) return;
 
@@ -113,11 +111,10 @@ const VillagerDashboard: React.FC = () => {
 
     const analysisResult = await analyzeWaterImage(imageBase64.split(',')[1], imageFile.type);
     
-    const newStatus = analysisResult.status;
+    // Play an immediate voice alert with the results.
+    await playScanResultAlert(analysisResult);
 
-    // Await the voice alert to ensure it plays before other UI updates can interrupt it.
-    await playScanResultAlert(newStatus);
-    
+    const newStatus = analysisResult.status;
     const newMetrics = generateRandomMetrics(newStatus);
     setDescriptionOverride(analysisResult.explanation);
     setHistory(prev => prev.map(item => item.day === 'Today' ? { ...item, status: newStatus } : item));

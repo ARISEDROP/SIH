@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Modal from './Modal';
 import { SparklesIcon, SendIcon, UserIcon, MicrophoneIcon, SpeakerIcon } from '../common/icons';
-import { streamGeminiResponse, translateText } from '../../services/gemini';
+import { streamGeminiResponse, translateText, translateToEnglish } from '../../services/gemini';
 import { speakText } from '../../services/voice';
 import { useAppContext } from '../../context/AppContext';
 
@@ -78,15 +78,32 @@ const ChatbotModal: React.FC<ChatbotModalProps> = ({ isOpen, onClose }) => {
     setMessages(prev => [...prev, botMessagePlaceholder]);
 
     try {
-        let fullResponse = "";
-        for await (const chunk of streamGeminiResponse(userMessage.text)) {
-            fullResponse += chunk;
-            setMessages(prev => {
-                const newMessages = [...prev];
-                newMessages[newMessages.length - 1] = { sender: 'bot', text: fullResponse };
-                return newMessages;
-            });
+        // 1. Translate user input to English if necessary
+        let promptForGemini = userMessage.text;
+        if (language !== 'en-US') {
+            promptForGemini = await translateToEnglish(userMessage.text, language);
         }
+
+        // 2. Get full response from Gemini (in English)
+        let fullEnglishResponse = "";
+        const stream = streamGeminiResponse(promptForGemini);
+        for await (const chunk of stream) {
+            fullEnglishResponse += chunk;
+        }
+
+        // 3. Translate response back to the user's language if necessary
+        let finalBotResponse = fullEnglishResponse;
+        if (language !== 'en-US' && fullEnglishResponse) {
+            finalBotResponse = await translateText(fullEnglishResponse, language);
+        }
+        
+        // 4. Update the placeholder message with the final, translated response
+        setMessages(prev => {
+            const newMessages = [...prev];
+            newMessages[newMessages.length - 1] = { sender: 'bot', text: finalBotResponse || "Sorry, I couldn't get a response." };
+            return newMessages;
+        });
+
     } catch (error) {
         console.error("Error getting response from Gemini:", error);
         setMessages(prev => {
@@ -110,10 +127,7 @@ const ChatbotModal: React.FC<ChatbotModalProps> = ({ isOpen, onClose }) => {
 
   const handleSpeak = async (text: string) => {
     let translatedText = text;
-    // The bot should respond in English based on the system prompt, so we translate before speaking.
-    if (language !== 'en-US') {
-        translatedText = await translateText(text, language);
-    }
+    // The bot's internal text is now in the user's language, so we can speak it directly.
     await speakText(translatedText, language);
   };
 

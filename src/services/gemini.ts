@@ -226,18 +226,19 @@ export async function generateOutbreakForecast(trends: DiseaseTrend[]): Promise<
     }
 }
 
+const languageMap: { [key: string]: string } = {
+    'hi-IN': 'Hindi',
+    'ta-IN': 'Tamil',
+    'as-IN': 'Assamese',
+};
+
 /**
- * Translates text to a target language using Gemini.
- * @param text The text to translate.
+ * Translates text from English to a target language using Gemini.
+ * @param text The English text to translate.
  * @param targetLang The language code (e.g., 'hi-IN').
  * @returns The translated text.
  */
 export async function translateText(text: string, targetLang: string): Promise<string> {
-    const languageMap: { [key: string]: string } = {
-        'hi-IN': 'Hindi',
-        'ta-IN': 'Tamil',
-        'as-IN': 'Assamese',
-    };
     const targetLanguageName = languageMap[targetLang];
     if (!targetLanguageName || targetLang === 'en-US') return text;
 
@@ -253,6 +254,30 @@ export async function translateText(text: string, targetLang: string): Promise<s
     } catch (error) {
         console.error(`Error translating text to ${targetLanguageName}:`, error);
         return text;
+    }
+}
+
+/**
+ * Translates text from a source language to English using Gemini.
+ * @param text The text to translate.
+ * @param sourceLang The language code of the source text (e.g., 'hi-IN').
+ * @returns The translated English text.
+ */
+export async function translateToEnglish(text: string, sourceLang: string): Promise<string> {
+    const sourceLanguageName = languageMap[sourceLang];
+    if (!sourceLanguageName || sourceLang === 'en-US') return text;
+
+    const prompt = `Translate the following ${sourceLanguageName} text to English. Provide only the translation, without any additional comments or labels.\n\nText: "${text}"`;
+    try {
+        const response = await ai.models.generateContent({
+            model: "gemini-2.5-flash",
+            contents: prompt,
+            config: { temperature: 0.3 }
+        });
+        return response.text.trim();
+    } catch (error) {
+        console.error(`Error translating text from ${sourceLanguageName} to English:`, error);
+        return text; // Return original text on error
     }
 }
 
