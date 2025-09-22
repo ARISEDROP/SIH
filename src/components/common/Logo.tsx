@@ -1,11 +1,13 @@
 import React from 'react';
 import { AquaLogoIcon } from './icons';
+import { useTranslation } from '../../hooks/useTranslation';
 
 interface LogoProps {
   size?: 'small' | 'large';
 }
 
 const Logo: React.FC<LogoProps> = ({ size = 'large' }) => {
+  const { t } = useTranslation();
   return (
     <div className={`flex items-center gap-3 ${size === 'large' ? 'flex-col text-center' : ''}`}>
       <div className={`relative ${size === 'small' ? '' : 'inline-block text-cyan-400 bg-slate-800 p-3 rounded-full'}`}>
@@ -19,7 +21,7 @@ const Logo: React.FC<LogoProps> = ({ size = 'large' }) => {
           Aqua
         </h1>
         {size === 'large' && (
-          <p className="mt-1 text-cyan-200 text-sm">Your Community's Guardian</p>
+          <p className="mt-1 text-cyan-200 text-sm">{t('modals.aboutTagline')}</p>
         )}
       </div>
     </div>

@@ -4,6 +4,7 @@ import { Tip } from '../../types';
 import { SpeakerIcon } from '../common/icons';
 import { speakText } from '../../services/voice';
 import { translateText } from '../../services/gemini';
+import { useTranslation } from '../../hooks/useTranslation';
 
 interface GuideModalProps {
   isOpen: boolean;
@@ -13,15 +14,16 @@ interface GuideModalProps {
 }
 
 const GuideModal: React.FC<GuideModalProps> = ({ isOpen, onClose, guide, language }) => {
+  const { t } = useTranslation();
   if (!guide) return null;
 
   const handlePlayGuide = async () => {
     const textToSpeak = `${guide.title}. ${guide.steps.join('. ')}`;
-    let translatedText = textToSpeak;
-    if (language !== 'en-US') {
-        translatedText = await translateText(textToSpeak, language);
-    }
-    await speakText(translatedText, language);
+    // The text is already translated, so we just speak it in the current language.
+    // However, for best voice quality, we can try to get a new translation from Gemini if not English.
+    const textForTTS = language === 'en-US' ? textToSpeak : await translateText(textToSpeak, language) || textToSpeak;
+    
+    await speakText(textForTTS, language);
   };
 
   const handleClose = () => {
@@ -41,7 +43,7 @@ const GuideModal: React.FC<GuideModalProps> = ({ isOpen, onClose, guide, languag
                 </div>
                  <button 
                     onClick={handlePlayGuide}
-                    aria-label="Read guide aloud"
+                    aria-label={t('modals.readAloud')}
                     className="p-3 bg-slate-800/70 rounded-full text-cyan-300 hover:bg-slate-700/70 transition-colors focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:ring-offset-2 focus:ring-offset-slate-900">
                     <SpeakerIcon className="w-6 h-6" />
                 </button>
@@ -49,8 +51,8 @@ const GuideModal: React.FC<GuideModalProps> = ({ isOpen, onClose, guide, languag
 
             <ol className="space-y-3 list-decimal list-inside text-gray-300 bg-slate-800/60 p-4 rounded-lg border border-slate-700">
                 {guide.steps.map((step, index) => (
-                    <li key={index} className="pl-2 leading-relaxed">
-                        <span className="font-semibold text-white">{step.split('.')[0]}.</span>{step.substring(step.indexOf('.') + 1)}
+                    <li key={index} className="leading-relaxed">
+                        {step}
                     </li>
                 ))}
             </ol>

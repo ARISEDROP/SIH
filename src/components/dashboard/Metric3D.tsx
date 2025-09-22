@@ -81,7 +81,7 @@ const Metric3D: React.FC<Metric3DProps> = ({ icon, metric, unit, name, max }) =>
                         }}
                     >
                          <div
-                            className={`w-full h-full transition-all duration-300 ${colors.glow} group-hover:shadow-[0_0_20px_5px_hsla(var(--glow-hsl),0.8)]`}
+                            className={`w-full h-full transition-all duration-300 ${colors.glow} group-hover:shadow-[0_0_30px_8px_hsla(var(--glow-hsl),1)]`}
                             style={{
                                 '--glow-hsl': metric.status === 'safe' ? '180,70%,50%' : metric.status === 'caution' ? '45,90%,50%' : '0,80%,60%',
                                 background: `linear-gradient(to top, ${colors.dark}, ${colors.base}, ${colors.light})`,

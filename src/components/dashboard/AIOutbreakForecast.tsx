@@ -3,9 +3,6 @@ import { SparklesIcon, SyncIcon, AlertTriangleIcon } from '../common/icons';
 import { diseaseTrendsData } from '../../constants';
 import { generateOutbreakForecast, ForecastError } from '../../services/gemini';
 
-const FORECAST_CACHE_KEY = 'aquaForecastCache';
-const CACHE_TTL = 3600 * 1000; // 1 hour in milliseconds
-
 interface ForecastData {
     summary: string;
     dailyForecast: {
@@ -13,43 +10,24 @@ interface ForecastData {
         disease: string;
         riskLevel: string;
     }[];
+    stale?: boolean;
 }
 
 const AIOutbreakForecast: React.FC = () => {
     const [forecast, setForecast] = useState<ForecastData | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [isStale, setIsStale] = useState(false);
 
-    const fetchForecast = async (forceRefresh = false) => {
+    const fetchForecast = async () => {
         setIsLoading(true);
         setError(null);
-
-        if (!forceRefresh) {
-            try {
-                const cachedItem = localStorage.getItem(FORECAST_CACHE_KEY);
-                if (cachedItem) {
-                    const { forecast: cachedForecast, timestamp } = JSON.parse(cachedItem);
-                    if (Date.now() - timestamp < CACHE_TTL) {
-                        setForecast(cachedForecast);
-                        setIsLoading(false);
-                        return;
-                    }
-                }
-            } catch (e) {
-                console.error("Failed to read forecast from cache", e);
-            }
-        }
+        setIsStale(false);
 
         try {
             const generatedForecast = await generateOutbreakForecast(diseaseTrendsData);
             setForecast(generatedForecast);
-            setError(null);
-            try {
-                const cachePayload = { forecast: generatedForecast, timestamp: Date.now() };
-                localStorage.setItem(FORECAST_CACHE_KEY, JSON.stringify(cachePayload));
-            } catch(e) {
-                console.error("Failed to save forecast to cache", e);
-            }
+            setIsStale(generatedForecast.stale ?? false);
         } catch (e: unknown) {
             console.error("Error in fetchForecast component:", e);
             if (e instanceof ForecastError) {
@@ -103,7 +81,7 @@ const AIOutbreakForecast: React.FC = () => {
                     <h3 className="text-xl font-semibold text-purple-300 tracking-wide">AI Outbreak Forecast</h3>
                 </div>
                 <button
-                    onClick={() => fetchForecast(true)}
+                    onClick={() => fetchForecast()}
                     disabled={isLoading}
                     className="p-2 text-purple-300 hover:text-white disabled:text-gray-500 hover:bg-slate-700/80 rounded-full transition-colors"
                     aria-label="Regenerate forecast"
@@ -111,6 +89,8 @@ const AIOutbreakForecast: React.FC = () => {
                     <SyncIcon className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
                 </button>
             </div>
+            
+            {isStale && <p className="text-xs text-yellow-400 text-center mb-2 animate-fade-in">Displaying cached data. You may be offline.</p>}
 
             <div className="mb-4 min-h-[32px]">
                 {renderContent()}
@@ -131,7 +111,7 @@ const AIOutbreakForecast: React.FC = () => {
                     forecast.dailyForecast.slice(0, 3).map((day) => {
                          const riskConfig = riskLevelConfig[day.riskLevel as keyof typeof riskLevelConfig] || riskLevelConfig.Default;
                         return (
-                             <div key={day.day} className="flex justify-between items-center text-sm p-2 bg-slate-800/60 rounded-md">
+                             <div key={day.day} className="flex justify-between items-center text-sm p-2 bg-slate-800/60 rounded-md animate-fade-in">
                                 <span className="font-medium text-white">{day.day}</span>
                                 <div className="flex items-center gap-2">
                                 <span className="font-bold text-yellow-300">{day.disease}</span>

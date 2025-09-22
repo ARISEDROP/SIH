@@ -66,10 +66,10 @@ const WaterDroplet: React.FC<WaterDropletProps> = ({ status }) => {
         .particle-4 { animation: float-2 15s ease-in-out infinite reverse; }
         .particle-5 { animation: float-1 9s ease-in-out infinite; }
       `}</style>
-      <svg viewBox="0 0 100 100" className={`w-full h-full will-change-transform ${currentStatus.animation}`}>
+      <svg viewBox="0 0 100 100" className={`w-full h-full will-change-transform ${currentStatus.animation} ${status === 'unsafe' ? 'animate-color-glitch' : ''}`}>
         <defs>
           <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
-            <feGaussianBlur stdDeviation="3" result="coloredBlur" />
+            <feGaussianBlur stdDeviation="8" result="coloredBlur" />
             <feMerge>
               <feMergeNode in="coloredBlur" />
               <feMergeNode in="SourceGraphic" />

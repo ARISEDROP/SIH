@@ -4,6 +4,7 @@ import { SparklesIcon, SendIcon, UserIcon, MicrophoneIcon, SpeakerIcon } from '.
 import { streamGeminiResponse, translateText, translateToEnglish } from '../../services/gemini';
 import { speakText } from '../../services/voice';
 import { useAppContext } from '../../context/AppContext';
+import { useTranslation } from '../../hooks/useTranslation';
 
 declare global {
   interface Window {
@@ -20,18 +21,24 @@ interface ChatbotModalProps {
 interface Message {
     sender: 'user' | 'bot';
     text: string;
+    originalTextForTTS?: string;
 }
 
 const ChatbotModal: React.FC<ChatbotModalProps> = ({ isOpen, onClose }) => {
   const { language } = useAppContext();
-  const [messages, setMessages] = useState<Message[]>([
-      { sender: 'bot', text: "Hello! I'm Aqua, your personal water quality assistant. How can I help you today?" }
-  ]);
+  const { t } = useTranslation();
+  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const recognitionRef = useRef<any>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+        setMessages([{ sender: 'bot', text: t('modals.chatbotHello') }]);
+    }
+  }, [isOpen, t]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -92,15 +99,23 @@ const ChatbotModal: React.FC<ChatbotModalProps> = ({ isOpen, onClose }) => {
         }
 
         // 3. Translate response back to the user's language if necessary
-        let finalBotResponse = fullEnglishResponse;
+        let finalBotResponseText = fullEnglishResponse;
         if (language !== 'en-US' && fullEnglishResponse) {
-            finalBotResponse = await translateText(fullEnglishResponse, language);
+            const translated = await translateText(fullEnglishResponse, language);
+            if (translated) {
+                finalBotResponseText = translated;
+            }
         }
         
-        // 4. Update the placeholder message with the final, translated response
+        // 4. Update the placeholder message with the final response and original English text for TTS
         setMessages(prev => {
             const newMessages = [...prev];
-            newMessages[newMessages.length - 1] = { sender: 'bot', text: finalBotResponse || "Sorry, I couldn't get a response." };
+            const newBotMessage: Message = {
+                sender: 'bot',
+                text: finalBotResponseText || "Sorry, I couldn't get a response.",
+                originalTextForTTS: fullEnglishResponse || undefined
+            };
+            newMessages[newMessages.length - 1] = newBotMessage;
             return newMessages;
         });
 
@@ -125,10 +140,15 @@ const ChatbotModal: React.FC<ChatbotModalProps> = ({ isOpen, onClose }) => {
     }
   };
 
-  const handleSpeak = async (text: string) => {
-    let translatedText = text;
-    // The bot's internal text is now in the user's language, so we can speak it directly.
-    await speakText(translatedText, language);
+  const handleSpeak = async (message: Message) => {
+    const wasTranslationAttempted = !!message.originalTextForTTS;
+    // Translation was successful if the displayed text is different from the original English text.
+    const wasTranslationSuccessful = wasTranslationAttempted && message.text !== message.originalTextForTTS;
+    
+    const textToSay = wasTranslationSuccessful ? message.text : (message.originalTextForTTS || message.text);
+    const langToUse = wasTranslationSuccessful ? language : 'en-US';
+
+    await speakText(textToSay, langToUse);
   };
 
   const handleClose = () => {
@@ -139,21 +159,21 @@ const ChatbotModal: React.FC<ChatbotModalProps> = ({ isOpen, onClose }) => {
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} title="Ask Aqua AI">
+    <Modal isOpen={isOpen} onClose={handleClose} title={t('modals.askAqua')}>
       <div className="flex flex-col h-[70vh] max-h-[500px]">
         <div className="flex-grow p-4 space-y-4 overflow-y-auto bg-gradient-to-b from-slate-800/40 to-slate-900/40">
             {messages.map((msg, index) => (
                 <div key={index} className={`flex items-start gap-3 ${msg.sender === 'user' ? 'justify-end' : ''} animate-fade-in-up group`} style={{ animationDuration: '400ms' }}>
                     {msg.sender === 'bot' && (
-                        <div className="w-8 h-8 flex-shrink-0 bg-purple-500 text-white rounded-full flex items-center justify-center">
+                        <div className="w-8 h-8 flex-shrink-0 bg-purple-500 text-white rounded-full flex items-center justify-center shadow-[0_0_15px_rgba(167,139,250,0.6)] animate-pulse">
                            <SparklesIcon className="w-5 h-5"/>
                         </div>
                     )}
-                    <div className={`relative max-w-xs md:max-w-md p-3 rounded-lg text-white ${msg.sender === 'user' ? 'bg-cyan-600 rounded-br-none' : 'bg-slate-700 rounded-bl-none'}`}>
-                        <p className="text-sm whitespace-pre-wrap">{msg.text}</p>
+                    <div className={`relative max-w-xs md:max-w-md p-3 rounded-lg text-white ${msg.sender === 'user' ? 'bg-cyan-600 rounded-br-none' : `bg-slate-700 rounded-bl-none overflow-hidden ${!isLoading && msg.text ? 'animate-glowing-streak' : ''}`}`}>
+                        <p className="relative z-10 text-sm whitespace-pre-wrap">{msg.text}</p>
                         {msg.sender === 'bot' && msg.text && !isLoading && (
                              <button 
-                                onClick={() => handleSpeak(msg.text)} 
+                                onClick={() => handleSpeak(msg)} 
                                 className="absolute -bottom-3 -right-3 p-1.5 bg-slate-600 rounded-full text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity focus:opacity-100 hover:text-white active:scale-90"
                                 aria-label="Read message aloud"
                             >
@@ -170,8 +190,8 @@ const ChatbotModal: React.FC<ChatbotModalProps> = ({ isOpen, onClose }) => {
             ))}
             {isLoading && messages[messages.length-1].text === "" && (
                  <div className="flex items-start gap-3 animate-fade-in-up" style={{ animationDuration: '400ms' }}>
-                    <div className="w-8 h-8 flex-shrink-0 bg-purple-500 text-white rounded-full flex items-center justify-center">
-                        <SparklesIcon className="w-5 h-5 animate-pulse"/>
+                    <div className="w-8 h-8 flex-shrink-0 bg-purple-500 text-white rounded-full flex items-center justify-center shadow-[0_0_15px_rgba(167,139,250,0.6)] animate-pulse">
+                        <SparklesIcon className="w-5 h-5"/>
                     </div>
                     <div className="max-w-xs md:max-w-md p-3 rounded-lg bg-slate-700 rounded-bl-none">
                         <div className="flex items-center space-x-1">
@@ -191,7 +211,7 @@ const ChatbotModal: React.FC<ChatbotModalProps> = ({ isOpen, onClose }) => {
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && handleSend()}
-                  placeholder="Ask about water safety..."
+                  placeholder={t('modals.chatbotPlaceholder')}
                   className="w-full bg-slate-800/60 border border-slate-700 rounded-lg py-3 pl-4 pr-24 text-white focus:outline-none focus:ring-cyan-500 focus:border-cyan-500"
                   disabled={isLoading}
                 />

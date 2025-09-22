@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Modal from './Modal';
 import { BluetoothIcon, SyncIcon, CheckCircleIcon, BluetoothOffIcon, AlertTriangleIcon, RadarIcon, EjectIcon } from '../common/icons';
+import { useTranslation } from '../../hooks/useTranslation';
 
 // Add Web Bluetooth type definitions for TypeScript to resolve compilation errors.
 // In a real project, this would be handled by including "web-bluetooth" in tsconfig.json's "lib" option.
@@ -50,6 +51,7 @@ const HardwareIntegrationModal: React.FC<HardwareIntegrationModalProps> = ({ isO
     const [isEjecting, setIsEjecting] = useState(false);
     const dataIntervalRef = useRef<number | null>(null);
     const tickCounterRef = useRef(0);
+    const { t, t_html } = useTranslation();
 
     const cleanup = () => {
         if (dataIntervalRef.current) {
@@ -85,7 +87,7 @@ const HardwareIntegrationModal: React.FC<HardwareIntegrationModalProps> = ({ isO
 
     const handleScanAndConnect = async () => {
         if (!navigator.bluetooth) {
-            setErrorMessage('Web Bluetooth is not supported on this browser or device.');
+            setErrorMessage(t('modals.hwErrorBluetooth'));
             setStatus('error');
             return;
         }
@@ -142,9 +144,9 @@ const HardwareIntegrationModal: React.FC<HardwareIntegrationModalProps> = ({ isO
             // For all other errors, log them and display an appropriate message.
             console.error('Bluetooth connection failed:', error);
             if (error.name === 'NotAllowedError') {
-                 setErrorMessage('Bluetooth permission was denied. Please allow access in your browser settings.');
+                 setErrorMessage(t('modals.hwErrorPermission'));
             } else {
-                setErrorMessage('Connection failed. Ensure the device is in range and powered on.');
+                setErrorMessage(t('modals.hwErrorGeneric'));
             }
             setStatus('error');
         }
@@ -179,17 +181,17 @@ const HardwareIntegrationModal: React.FC<HardwareIntegrationModalProps> = ({ isO
                 return (
                     <div className="flex flex-col items-center justify-center h-56 text-center">
                         <AlertTriangleIcon className="w-10 h-10 text-red-400 mb-4" />
-                        <h3 className="font-semibold text-white text-lg">An Error Occurred</h3>
+                        <h3 className="font-semibold text-white text-lg">{t('modals.hwErrorTitle')}</h3>
                         <p className="text-gray-400 text-sm mt-1">{errorMessage}</p>
                         <p className="text-gray-500 text-xs mt-4 px-4">
-                            Still having trouble? Consult the hardware manual for troubleshooting steps.
+                            {t('modals.hwErrorTroubleshoot')}
                         </p>
                         <div className="mt-6 flex items-center justify-center gap-4">
                             <button onClick={handleTryAgain} className="px-4 py-2 text-sm font-semibold text-white bg-slate-600 rounded-lg hover:bg-slate-500">
-                                Try Again
+                                {t('modals.tryAgain')}
                             </button>
                             <button onClick={onOpenManual} className="px-4 py-2 text-sm font-semibold text-cyan-300 bg-slate-800/60 rounded-lg hover:bg-slate-700/80 border border-slate-600">
-                                Open Manual
+                                {t('modals.openManual')}
                             </button>
                         </div>
                     </div>
@@ -198,8 +200,8 @@ const HardwareIntegrationModal: React.FC<HardwareIntegrationModalProps> = ({ isO
                 return (
                     <div className="flex flex-col items-center justify-center h-56">
                         <RadarIcon className="w-10 h-10 text-cyan-400 animate-pulse" />
-                        <p className="font-semibold text-white mt-4">Scanning for Devices...</p>
-                        <p className="text-sm text-gray-400 mt-1">Please select your sensor from the browser pop-up.</p>
+                        <p className="font-semibold text-white mt-4">{t('modals.scanningTitle')}</p>
+                        <p className="text-sm text-gray-400 mt-1">{t('modals.scanningDesc')}</p>
                     </div>
                 );
             case 'connecting':
@@ -207,10 +209,10 @@ const HardwareIntegrationModal: React.FC<HardwareIntegrationModalProps> = ({ isO
                     <div className="flex flex-col items-center justify-center h-56">
                         <SyncIcon className="w-10 h-10 text-cyan-400 animate-spin" />
                         <p className="font-semibold text-white mt-4">
-                            {`Connecting to ${connectingDeviceName}...`}
+                            {`${t('modals.connectingTitle')} ${connectingDeviceName}...`}
                         </p>
                         <p className="text-sm text-gray-400 mt-1">
-                            Establishing secure connection...
+                            {t('modals.connectingDesc')}
                         </p>
                     </div>
                 );
@@ -218,11 +220,11 @@ const HardwareIntegrationModal: React.FC<HardwareIntegrationModalProps> = ({ isO
                 return (
                     <div className="animate-fade-in flex flex-col items-center justify-center h-56 text-center">
                         <CheckCircleIcon className="w-12 h-12 text-emerald-400 mb-4" />
-                        <h3 className="font-semibold text-white text-lg">Successfully Connected!</h3>
+                        <h3 className="font-semibold text-white text-lg">{t('modals.connectedTitle')}</h3>
                         <p className="text-gray-400 text-sm mt-1">
-                            Connected to <span className="font-bold text-gray-200">{connectedDevice?.name || 'Unknown Device'}</span>.
+                            {t('modals.connectedDesc')} <span className="font-bold text-gray-200">{connectedDevice?.name || 'Unknown Device'}</span>.
                         </p>
-                        <p className="text-gray-400 text-sm">Live data is now streaming to your dashboard.</p>
+                        <p className="text-gray-400 text-sm">{t('modals.connectedLive')}</p>
                         <div className="mt-6 flex flex-wrap justify-center items-center gap-4">
                             <button 
                                 onClick={handleSafeEject}
@@ -230,7 +232,7 @@ const HardwareIntegrationModal: React.FC<HardwareIntegrationModalProps> = ({ isO
                                 className="w-32 flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg bg-yellow-800/80 text-yellow-200 hover:bg-yellow-700/80 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 {isEjecting ? <SyncIcon className="w-4 h-4 animate-spin" /> : <EjectIcon className="w-4 h-4" />}
-                                {isEjecting ? 'Ejecting...' : 'Safe Eject'}
+                                {isEjecting ? t('modals.ejecting') : t('modals.safeEject')}
                             </button>
                             <button 
                                 onClick={handleDisconnect}
@@ -238,7 +240,7 @@ const HardwareIntegrationModal: React.FC<HardwareIntegrationModalProps> = ({ isO
                                 className="w-32 flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg bg-slate-700 text-red-300 hover:bg-slate-600 disabled:opacity-50"
                             >
                                 <BluetoothOffIcon className="w-4 h-4" />
-                                Disconnect
+                                {t('modals.disconnect')}
                             </button>
                         </div>
                     </div>
@@ -248,10 +250,10 @@ const HardwareIntegrationModal: React.FC<HardwareIntegrationModalProps> = ({ isO
                 return (
                      <div className="flex flex-col items-center justify-center h-56 text-center">
                         <BluetoothIcon className="w-10 h-10 text-cyan-400 mb-4" />
-                        <h3 className="font-semibold text-white text-lg">Connect a Hardware Sensor</h3>
-                        <p className="text-gray-400 text-sm mt-1 mb-6">Use Web Bluetooth to find and stream data from a real device.</p>
+                        <h3 className="font-semibold text-white text-lg">{t('modals.connectSensorTitle')}</h3>
+                        <p className="text-gray-400 text-sm mt-1 mb-6">{t('modals.connectSensorDesc')}</p>
                         <button onClick={handleScanAndConnect} className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 font-semibold rounded-lg bg-cyan-600 text-white hover:bg-cyan-500 transition-colors">
-                            Scan for Devices
+                            {t('modals.scanForDevices')}
                         </button>
                     </div>
                 );
@@ -259,7 +261,7 @@ const HardwareIntegrationModal: React.FC<HardwareIntegrationModalProps> = ({ isO
     };
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title="OneTap Connect">
+        <Modal isOpen={isOpen} onClose={onClose} title={t('modals.oneTapConnect')}>
             <div className="p-6 min-h-[350px]">
                 {renderContent()}
             </div>

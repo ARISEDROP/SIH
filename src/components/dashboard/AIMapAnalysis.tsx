@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
-// FIX: Corrected import paths to point to files inside the 'src' directory.
-import { SparklesIcon, SyncIcon, AlertTriangleIcon } from '../src/components/common/icons';
-import { generateMapAnalysis } from '../src/services/gemini';
-import { villageData } from '../src/constants';
+import { SparklesIcon, SyncIcon, AlertTriangleIcon } from '../common/icons';
+import { generateMapAnalysis } from '../../services/gemini';
+import { villageData } from '../../constants';
 
 const AIMapAnalysis: React.FC = () => {
     const [analysis, setAnalysis] = useState<string>('');

@@ -27,6 +27,9 @@ export interface SymptomReport {
   resolved: boolean;
   userName?: string;
   userAvatar?: string;
+  symptoms_en?: string;
+  notes_en?: string;
+  language?: string;
 }
 
 export interface Tip {
@@ -82,4 +85,19 @@ export interface WaterScanResult {
   image: string; // base64
   userName: string;
   timestamp: string;
+  confidence: number; 
+  imageQualityFeedback?: string;
+}
+
+export interface MissingDataReport {
+  id: number;
+  villageId: number;
+  villageName: string;
+  dataType: 'Water Quality Sensor Data' | 'Symptom Report' | 'Other';
+  notes: string;
+  timestamp: string;
+  location?: {
+    latitude: number;
+    longitude: number;
+  };
 }

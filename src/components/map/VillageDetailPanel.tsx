@@ -1,6 +1,7 @@
 import React from 'react';
 import { Village, WaterStatus, QualityHistory } from '../../types';
-import { XIcon, ClockIcon, ShieldCheckIcon, AlertTriangleIcon, AlertOctagonIcon, CompassIcon } from '../common/icons';
+import { XIcon, ClockIcon, ShieldCheckIcon, AlertTriangleIcon, AlertOctagonIcon, CompassIcon, FileWarningIcon } from '../common/icons';
+import { useTranslation } from '../../hooks/useTranslation';
 
 const statusConfig: { [key in WaterStatus]: { icon: React.ReactElement<any>; textClass: string; bgClass: string; borderColor: string; } } = {
   safe: { icon: <ShieldCheckIcon />, textClass: 'text-emerald-300', bgClass: 'bg-emerald-500/20', borderColor: 'border-emerald-500/50' },
@@ -41,16 +42,18 @@ interface VillageDetailPanelProps {
   onRecenter: () => void;
   isOnline: boolean;
   distance: number | null;
+  onReportMissingData: () => void;
 }
 
-const VillageDetailPanel: React.FC<VillageDetailPanelProps> = ({ village, onClose, onRecenter, isOnline, distance }) => {
+const VillageDetailPanel: React.FC<VillageDetailPanelProps> = ({ village, onClose, onRecenter, isOnline, distance, onReportMissingData }) => {
+    const { t, t_html } = useTranslation();
     const config = statusConfig[village.status];
     const history = generateMockHistory(village.status);
 
     const glowShadow: { [key in WaterStatus]: string } = {
-        safe: 'shadow-[0_0_20px_rgba(45,212,191,0.3)]',
-        caution: 'shadow-[0_0_20px_rgba(250,204,21,0.3)]',
-        unsafe: 'shadow-[0_0_20px_rgba(248,113,113,0.3)]',
+        safe: 'shadow-[0_0_30px_5px_rgba(45,212,191,0.4)]',
+        caution: 'shadow-[0_0_30px_5px_rgba(250,204,21,0.4)]',
+        unsafe: 'shadow-[0_0_30px_5px_rgba(248,113,113,0.4)]',
     };
 
     const offlineStyles = {
@@ -61,39 +64,40 @@ const VillageDetailPanel: React.FC<VillageDetailPanelProps> = ({ village, onClos
     };
 
     return (
-        <div className={`bg-slate-900/95 backdrop-blur-lg p-4 rounded-l-2xl border-l border-t border-b h-full flex flex-col ${isOnline ? `${config.borderColor} ${glowShadow[village.status]}` : `${offlineStyles.borderColor} ${offlineStyles.glowShadow}`}`}>
-            <div className="flex justify-between items-center mb-4">
+        <div className={`relative bg-slate-900/95 backdrop-blur-lg p-4 rounded-l-2xl border-l border-t border-b h-full flex flex-col ${isOnline ? `${config.borderColor} ${glowShadow[village.status]}` : `${offlineStyles.borderColor} ${offlineStyles.glowShadow}`}`}>
+            <div className="absolute inset-0 bg-[linear-gradient(rgba(34,211,238,0.03)_1px,transparent_1px),linear-gradient(to_right,rgba(34,211,238,0.03)_1px,transparent_1px)] bg-[background-size:1.5rem_1.5rem] opacity-50 pointer-events-none rounded-l-2xl"></div>
+            <div className="relative z-10 flex justify-between items-center mb-4">
                 <button onClick={onRecenter} className="focus:outline-none focus:ring-2 focus:ring-cyan-500 rounded-md -ml-1 p-1 group">
-                    <h4 className="font-semibold text-cyan-200 text-lg group-hover:text-cyan-100 group-hover:underline">{village.name} Details</h4>
+                    <h4 className="font-semibold text-cyan-200 text-lg group-hover:text-cyan-100 group-hover:underline">{t_html('healthWorker.villageDetails', { villageName: village.name })}</h4>
                 </button>
                 <button onClick={onClose} className="p-1 rounded-full text-gray-400 hover:bg-slate-700/80 hover:text-white transition-colors" aria-label="Close details">
                     <XIcon className="w-5 h-5" />
                 </button>
             </div>
             
-            <div className={`p-3 rounded-lg flex items-center gap-3 ${isOnline ? config.bgClass : offlineStyles.bgClass} mb-4`}>
+            <div className={`relative z-10 p-3 rounded-lg flex items-center gap-3 ${isOnline ? config.bgClass : offlineStyles.bgClass} mb-4`}>
                 {React.cloneElement(config.icon, { className: `w-6 h-6 ${isOnline ? config.textClass : offlineStyles.textClass}`})}
                 <div>
-                    <p className="text-sm text-gray-300">Current Status</p>
+                    <p className="text-sm text-gray-300">{t('healthWorker.currentStatus')}</p>
                     <p className={`font-bold text-lg ${isOnline ? config.textClass : offlineStyles.textClass}`}>{village.status.charAt(0).toUpperCase() + village.status.slice(1)}</p>
                 </div>
             </div>
 
-            <div className="bg-slate-800/60 p-3 rounded-lg mb-4">
+            <div className="relative z-10 bg-slate-800/60 p-3 rounded-lg mb-4">
                  <div className="flex items-center gap-3">
                     <CompassIcon className="w-6 h-6 text-cyan-300 flex-shrink-0" />
                     <div>
-                        <p className="text-sm text-gray-300">Location Data</p>
+                        <p className="text-sm text-gray-300">{t('healthWorker.locationData')}</p>
                         <p className="font-mono text-xs text-white">{village.lat.toFixed(4)}, {village.lng.toFixed(4)}</p>
-                        {distance !== null && <p className="text-xs text-cyan-200">Approx. {distance.toFixed(1)} km away</p>}
+                        {distance !== null && <p className="text-xs text-cyan-200">{t_html('healthWorker.kmAway', { distance: distance.toFixed(1) })}</p>}
                     </div>
                 </div>
             </div>
 
-            <div className="flex-grow overflow-y-auto pr-2">
+            <div className="relative z-10 flex-grow overflow-y-auto pr-2">
                 <div className="flex items-center gap-2 mb-4">
                     <ClockIcon className="w-5 h-5 text-cyan-300" />
-                    <h5 className="font-semibold text-cyan-300">Recent Quality History</h5>
+                    <h5 className="font-semibold text-cyan-300">{t('healthWorker.history')}</h5>
                 </div>
                 <div className="relative pl-5">
                     <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-slate-600 rounded-full" style={{ left: 'calc(0.375rem - 1px)' }}></div>
@@ -105,6 +109,16 @@ const VillageDetailPanel: React.FC<VillageDetailPanelProps> = ({ village, onClos
                         </div>
                     ))}
                 </div>
+            </div>
+
+            <div className="relative z-10 mt-4 pt-4 border-t border-slate-700/50">
+                <button
+                    onClick={onReportMissingData}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg bg-yellow-800/80 text-yellow-200 hover:bg-yellow-700/80 transition-colors"
+                >
+                    <FileWarningIcon className="w-4 h-4" />
+                    {t('header.reportMissingData')}
+                </button>
             </div>
         </div>
     );

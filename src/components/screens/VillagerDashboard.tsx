@@ -1,12 +1,13 @@
-import React, { useState, useMemo, useEffect, lazy, Suspense, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, lazy, Suspense, useCallback, useRef } from 'react';
 import Header from '../common/Header';
 import WaterStatusCard from '../dashboard/WaterStatusCard';
-import { PlusIcon, SparklesIcon, AlertOctagonIcon, SpeakerIcon, BookOpenIcon, ScannerIcon, CameraIcon, UserIcon } from '../common/icons';
+import { PlusIcon, SparklesIcon, AlertOctagonIcon, SpeakerIcon, BookOpenIcon, ScannerIcon, CameraIcon, UploadIcon, XIcon } from '../common/icons';
 import { waterQualityMetrics, generateRandomMetrics, diseaseTrendsData, waterQualityHistory } from '../../constants';
 import { analyzeWaterImage, translateText } from '../../services/gemini';
 import { speakText } from '../../services/voice';
 import { useAppContext } from '../../context/AppContext';
 import { WaterStatus, Tip, WaterQualityMetrics, WaterScanResult } from '../../types';
+import { useTranslation } from '../../hooks/useTranslation';
 
 const SymptomsFormModal = lazy(() => import('../modals/SymptomsFormModal'));
 const ChatbotModal = lazy(() => import('../modals/ChatbotModal'));
@@ -20,12 +21,14 @@ interface OutbreakAlertBannerProps {
 }
 
 const OutbreakAlertBanner: React.FC<OutbreakAlertBannerProps> = ({ diseaseName, language }) => {
-    const alertText = `High alert for ${diseaseName} in your area. Please ensure water is boiled before consumption and wash hands frequently.`;
+    const { t_html } = useTranslation();
+    const alertText = t_html('villager.highThreatText', { diseaseName });
     
     useEffect(() => {
         const playAlert = async () => {
-            let textToSpeak = await translateText(alertText, language);
-            await speakText(textToSpeak, language);
+            const translatedText = await translateText(alertText, language);
+            // If translation fails (null), speak original alert in English.
+            await speakText(translatedText || alertText, translatedText ? language : 'en-US');
         };
         playAlert();
         
@@ -33,15 +36,15 @@ const OutbreakAlertBanner: React.FC<OutbreakAlertBannerProps> = ({ diseaseName, 
     }, [diseaseName, language, alertText]);
 
     const handlePlayAlert = async () => {
-        let textToSpeak = await translateText(alertText, language);
-        await speakText(textToSpeak, language);
+        const translatedText = await translateText(alertText, language);
+        await speakText(translatedText || alertText, translatedText ? language : 'en-US');
     };
 
     return (
-        <div className="bg-red-900/80 backdrop-blur-md border border-red-500 rounded-2xl p-4 flex items-center gap-4 animate-pulse-glow" style={{'--glow-color': 'var(--red-rgb)'} as React.CSSProperties}>
+        <div className="bg-red-900/80 backdrop-blur-md border border-red-500 rounded-2xl p-4 flex items-center gap-4 animate-crackling-glow" style={{'--glow-color': 'var(--red-rgb)'} as React.CSSProperties}>
             <AlertOctagonIcon className="w-10 h-10 text-red-300 flex-shrink-0" />
             <div className="flex-grow">
-                <h3 className="font-bold text-red-200 text-lg">High Threat Alert</h3>
+                <h3 className="font-bold text-red-200 text-lg">{t_html('villager.highThreatAlert')}</h3>
                 <p className="text-red-200 text-sm">{alertText}</p>
             </div>
             <button 
@@ -55,15 +58,28 @@ const OutbreakAlertBanner: React.FC<OutbreakAlertBannerProps> = ({ diseaseName, 
 };
 
 const VillagerDashboard: React.FC = () => {
-  const { quickActionTips, reportSymptom, userProfile, language } = useAppContext();
+  const { 
+    quickActionTips, 
+    reportSymptom, 
+    userProfile, 
+    language,
+    isHardwareConnected,
+    liveStatus,
+    liveMetrics
+  } = useAppContext();
+  const { t } = useTranslation();
+  
   const [isSymptomsModalOpen, setIsSymptomsModalOpen] = useState(false);
   const [symptomModalInitialNotes, setSymptomModalInitialNotes] = useState('');
   const [isChatbotModalOpen, setIsChatbotModalOpen] = useState(false);
   const [activeGuide, setActiveGuide] = useState<Tip | null>(null);
-  const [currentStatus, setCurrentStatus] = useState<WaterStatus>('caution');
-  const [currentMetrics, setCurrentMetrics] = useState<WaterQualityMetrics>(waterQualityMetrics);
+  
+  // Local state for simulated/scanned data
+  const [localStatus, setLocalStatus] = useState<WaterStatus>('caution');
+  const [localMetrics, setLocalMetrics] = useState<WaterQualityMetrics>(waterQualityMetrics);
   const [history, setHistory] = useState(waterQualityHistory);
-  const [isCheckingQuality, setIsCheckingQuality] = useState(false);
+  
+  const [isCheckingQuality, setIsCheckingQuality] = useState(false); // For scanner animation
   const [descriptionOverride, setDescriptionOverride] = useState<string | null>(null);
   
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -74,7 +90,19 @@ const VillagerDashboard: React.FC = () => {
   
   const [isResultModalOpen, setIsResultModalOpen] = useState(false);
   const [scanResult, setScanResult] = useState<WaterScanResult | null>(null);
+  
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
 
+  // Determine which data source to use for the main status card
+  const displayStatus = isHardwareConnected ? liveStatus : localStatus;
+  const displayMetrics = (isHardwareConnected && liveMetrics) ? liveMetrics : localMetrics;
+  const isCheckingHardware = isHardwareConnected && !liveMetrics;
+  
+  // Update description based on data source
+  const currentDescription = isHardwareConnected && liveMetrics 
+    ? "Live data from nearby sensor." 
+    : descriptionOverride;
 
   const highThreatDisease = useMemo(() => diseaseTrendsData.find(d => d.threatLevel === 'high'), []);
 
@@ -91,6 +119,17 @@ const VillagerDashboard: React.FC = () => {
       reader.readAsDataURL(file);
     }
   };
+  
+  const handleClearImage = () => {
+    setImageFile(null);
+    setImageBase64('');
+    if (cameraInputRef.current) {
+      cameraInputRef.current.value = '';
+    }
+    if (galleryInputRef.current) {
+      galleryInputRef.current.value = '';
+    }
+  };
 
   const playScanResultAlert = useCallback(async (result: { status: WaterStatus; recommendations: string[] }) => {
     let alertTextPrefix = '';
@@ -99,9 +138,33 @@ const VillagerDashboard: React.FC = () => {
     }
     const alertText = `${alertTextPrefix}Water status is ${result.status}. Recommendations: ${result.recommendations.join('. ')}`;
     const translatedText = await translateText(alertText, language);
-    await speakText(translatedText, language);
+    // If translation fails (null), speak original alert in English.
+    await speakText(translatedText || alertText, translatedText ? language : 'en-US');
   }, [language]);
 
+  const handleSimulatedScan = async () => {
+    setIsCheckingQuality(true);
+    await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate processing
+
+    const statuses: WaterStatus[] = ['safe', 'caution', 'unsafe'];
+    const newStatus = statuses[Math.floor(Math.random() * statuses.length)];
+    const newMetrics = generateRandomMetrics(newStatus);
+    
+    setLocalStatus(newStatus);
+    setLocalMetrics(newMetrics);
+    setHistory(prev => prev.map(item => item.day === 'Today' ? { ...item, status: newStatus } : item));
+    setDescriptionOverride(`Simulated scan result is '${newStatus}'. This is a random result for demonstration purposes.`);
+    
+    const alertText = `Simulated scan complete. Water status is ${newStatus}.`;
+    try {
+        const translatedText = await translateText(alertText, language);
+        await speakText(translatedText || alertText, translatedText ? language : 'en-US');
+    } catch(e) {
+        console.error("Error in text-to-speech for simulated scan:", e);
+    }
+
+    setIsCheckingQuality(false);
+  };
 
   const handleStartScan = async () => {
     if (!imageBase64 || !imageFile) return;
@@ -109,21 +172,45 @@ const VillagerDashboard: React.FC = () => {
     setIsCheckingQuality(true);
     await new Promise(resolve => setTimeout(resolve, 2500));
 
+    // 1. Get AI analysis in English
     const analysisResult = await analyzeWaterImage(imageBase64.split(',')[1], imageFile.type);
     
-    // Play an immediate voice alert with the results.
+    // 2. Play alert using original English text (which will be translated by the function)
     await playScanResultAlert(analysisResult);
+
+    // 3. Translate results for display if the user's language is not English
+    let displayExplanation = analysisResult.explanation;
+    let displayRecommendations = analysisResult.recommendations;
+
+    if (language !== 'en-US' && analysisResult.explanation) {
+        try {
+            const [translatedExplanation, ...translatedRecs] = await Promise.all([
+                translateText(analysisResult.explanation, language),
+                ...analysisResult.recommendations.map(rec => translateText(rec, language))
+            ]);
+            displayExplanation = translatedExplanation || analysisResult.explanation;
+            displayRecommendations = translatedRecs.map((t, i) => t || analysisResult.recommendations[i]);
+        } catch (e) {
+            console.error("Translation failed for scan result display:", e);
+        }
+    }
 
     const newStatus = analysisResult.status;
     const newMetrics = generateRandomMetrics(newStatus);
+    
+    // Update local state with the original English explanation from AI to keep a consistent internal state
     setDescriptionOverride(analysisResult.explanation);
     setHistory(prev => prev.map(item => item.day === 'Today' ? { ...item, status: newStatus } : item));
-    setCurrentStatus(newStatus);
-    setCurrentMetrics(newMetrics);
+    setLocalStatus(newStatus);
+    setLocalMetrics(newMetrics);
 
-    // Create detailed report for modal
+    // 4. Prepare data for the results modal using the translated text
     const resultData: WaterScanResult = {
-        ...analysisResult,
+        status: analysisResult.status,
+        explanation: displayExplanation,
+        recommendations: displayRecommendations,
+        confidence: analysisResult.confidence,
+        imageQualityFeedback: analysisResult.imageQualityFeedback,
         image: imageBase64,
         userName: scanTarget === 'me' ? userProfile.name : otherUserName.trim() || 'Unnamed',
         timestamp: new Date().toLocaleString(),
@@ -132,10 +219,8 @@ const VillagerDashboard: React.FC = () => {
     setScanResult(resultData);
     setIsResultModalOpen(true);
 
-    // Reset form
     setIsCheckingQuality(false);
-    setImageFile(null);
-    setImageBase64('');
+    handleClearImage();
     setOtherUserName('');
   };
 
@@ -144,7 +229,7 @@ const VillagerDashboard: React.FC = () => {
     setSymptomModalInitialNotes(notes);
     setTimeout(() => {
       setIsSymptomsModalOpen(true);
-    }, 300); // Delay to allow first modal to close
+    }, 300);
   };
 
   const safetyGuides = useMemo(() => quickActionTips.map(tip => (
@@ -159,86 +244,111 @@ const VillagerDashboard: React.FC = () => {
     </button>
   )), [quickActionTips]);
 
-  const isAlertStatus = currentStatus === 'caution' || currentStatus === 'unsafe';
+  const isAlertStatus = displayStatus === 'caution' || displayStatus === 'unsafe';
 
   return (
     <div className="w-full max-w-5xl mx-auto animate-fade-in-up">
       <Header />
       <div className="mt-8 space-y-8">
-        {currentStatus === 'unsafe' && highThreatDisease && <OutbreakAlertBanner diseaseName={highThreatDisease.name} language={language} />}
+        {displayStatus === 'unsafe' && highThreatDisease && <OutbreakAlertBanner diseaseName={highThreatDisease.name} language={language} />}
 
         <WaterStatusCard 
-          status={currentStatus} 
-          metrics={currentMetrics}
-          isChecking={isCheckingQuality}
-          descriptionOverride={descriptionOverride}
+          status={displayStatus} 
+          metrics={displayMetrics}
+          isChecking={isCheckingQuality || isCheckingHardware}
+          descriptionOverride={currentDescription}
           history={history}
         />
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div 
-                className={`bg-slate-900/50 backdrop-blur-xl rounded-2xl shadow-lg border border-cyan-500/20 p-6 flex flex-col text-center transition-all duration-300 ${isAlertStatus ? 'animate-pulse-glow' : ''}`}
-                style={{'--glow-color': 'var(--cyan-rgb)'} as React.CSSProperties}
+                className={`bg-slate-900/50 backdrop-blur-xl rounded-2xl shadow-lg border border-cyan-500/20 p-6 flex flex-col text-center transition-all duration-300 shadow-cyan-500/10 shadow-[0_0_15px] hover:shadow-[0_0_25px_rgba(34,211,238,0.4)]`}
             >
                 <div className="mb-4 text-cyan-400"><ScannerIcon className="w-10 h-10 mx-auto" /></div>
-                <h3 className="text-xl font-semibold text-cyan-300 tracking-wide">AI Water Scanner</h3>
-                <p className="text-gray-400 mt-2 text-sm">A guided process to analyze your water sample.</p>
+                <h3 className="text-xl font-semibold text-cyan-300 tracking-wide">{t('villager.aiScanner')}</h3>
+                <p className="text-gray-400 mt-2 text-sm">{t('villager.aiScannerDesc')}</p>
                 
                 <div className="w-full space-y-4 mt-4 flex-grow flex flex-col">
-                  {/* Step 1: Target Selection */}
                   <div className="bg-slate-800/50 p-1 rounded-xl flex border border-slate-700">
-                      <button onClick={() => setScanTarget('me')} className={`w-1/2 py-2 text-sm font-semibold rounded-lg transition-colors ${scanTarget === 'me' ? 'bg-cyan-600 text-white' : 'text-gray-300'}`}>For Me</button>
-                      <button onClick={() => setScanTarget('other')} className={`w-1/2 py-2 text-sm font-semibold rounded-lg transition-colors ${scanTarget === 'other' ? 'bg-cyan-600 text-white' : 'text-gray-300'}`}>For Someone Else</button>
+                      <button onClick={() => setScanTarget('me')} className={`w-1/2 py-2 text-sm font-semibold rounded-lg transition-colors ${scanTarget === 'me' ? 'bg-cyan-600 text-white' : 'text-gray-300'}`}>{t('villager.forMe')}</button>
+                      <button onClick={() => setScanTarget('other')} className={`w-1/2 py-2 text-sm font-semibold rounded-lg transition-colors ${scanTarget === 'other' ? 'bg-cyan-600 text-white' : 'text-gray-300'}`}>{t('villager.forSomeoneElse')}</button>
                   </div>
 
-                  {/* Step 2: Name Input */}
                   {scanTarget === 'other' && (
                       <div className="animate-fade-in" style={{animationDuration: '300ms'}}>
                           <input
                               type="text" value={otherUserName} onChange={(e) => setOtherUserName(e.target.value)}
-                              placeholder="Enter person's name"
+                              placeholder={t('villager.enterNamePlaceholder')}
                               className="block w-full bg-slate-800/60 border border-slate-700 rounded-lg py-2 px-3 text-white focus:outline-none focus:ring-cyan-500 focus:border-cyan-500 sm:text-sm"
                           />
                       </div>
                   )}
 
-                  {/* Step 3: Image Upload */}
                   <div className="flex-grow flex flex-col justify-center">
-                    <input type="file" id="water-photo" className="hidden" accept="image/*" capture="environment" onChange={handleFileChange} />
-                    <label htmlFor="water-photo" className="w-full h-full cursor-pointer flex flex-col items-center justify-center gap-2 p-4 font-semibold rounded-lg transition-all duration-300 ease-in-out bg-slate-800/60 border-2 border-dashed border-slate-700 text-slate-400 hover:bg-slate-700/60 hover:border-cyan-500/50 hover:text-cyan-300">
-                      {imageBase64 ? (
-                        <img src={imageBase64} alt="Water sample preview" className="w-24 h-24 object-cover rounded-lg" />
-                      ) : (
-                        <>
-                          <CameraIcon className="w-8 h-8" />
-                          <span>Tap to Capture or Upload Photo</span>
-                        </>
-                      )}
-                    </label>
+                    <div className="w-full h-32 bg-slate-800/60 border-2 border-dashed border-slate-700 rounded-lg flex items-center justify-center p-2">
+                        {imageBase64 ? (
+                            <div className="relative">
+                                <img src={imageBase64} alt="Water sample preview" className="max-w-full max-h-28 object-contain rounded-lg" />
+                                <button 
+                                    onClick={handleClearImage}
+                                    className="absolute -top-2 -right-2 bg-red-600 text-white rounded-full p-1 hover:bg-red-500 transition-transform active:scale-90"
+                                    aria-label="Clear image"
+                                >
+                                    <XIcon className="w-4 h-4" />
+                                </button>
+                            </div>
+                        ) : (
+                            <span className="text-slate-400 text-sm px-4">{t('villager.imageSourceHint')}</span>
+                        )}
+                    </div>
+                  </div>
+
+                  <input ref={cameraInputRef} type="file" className="hidden" accept="image/*" capture="environment" onChange={handleFileChange} />
+                  <input ref={galleryInputRef} type="file" className="hidden" accept="image/*" onChange={handleFileChange} />
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <button onClick={() => cameraInputRef.current?.click()} className="w-full flex items-center justify-center gap-2 px-4 py-3 font-semibold rounded-lg transition-all duration-300 ease-in-out bg-slate-800/60 border border-slate-700 text-slate-300 hover:bg-slate-700/60 hover:border-cyan-500/50 hover:text-cyan-300">
+                        <CameraIcon className="w-5 h-5" />
+                        {t('villager.takePhoto')}
+                    </button>
+                    <button onClick={() => galleryInputRef.current?.click()} className="w-full flex items-center justify-center gap-2 px-4 py-3 font-semibold rounded-lg transition-all duration-300 ease-in-out bg-slate-800/60 border border-slate-700 text-slate-300 hover:bg-slate-700/60 hover:border-cyan-500/50 hover:text-cyan-300">
+                        <UploadIcon className="w-5 h-5" />
+                        {t('villager.fromGallery')}
+                    </button>
                   </div>
                 </div>
 
-                {/* Step 4: Analyze Button */}
-                <button
-                    onClick={handleStartScan}
-                    disabled={isCheckingQuality || !imageBase64}
-                    className="mt-4 w-full flex items-center justify-center gap-2 px-6 py-3 font-semibold rounded-lg transition-all duration-300 ease-in-out bg-cyan-600 text-white hover:bg-cyan-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-900 focus:ring-cyan-500 transform hover:scale-105 disabled:bg-slate-700 disabled:cursor-not-allowed active:scale-[0.98] will-change-transform"
-                >
-                    Analyze Water Sample
-                </button>
+                <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <button
+                        onClick={handleSimulatedScan}
+                        disabled={isCheckingQuality || !!imageBase64}
+                        className="w-full flex items-center justify-center gap-2 px-4 py-3 font-semibold rounded-lg transition-all duration-300 ease-in-out bg-slate-700 text-white hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-900 focus:ring-slate-500 disabled:bg-slate-800 disabled:text-gray-500 disabled:cursor-not-allowed active:scale-[0.98]"
+                    >
+                        <SparklesIcon className="w-5 h-5" />
+                        {t('villager.runSimulatedScan')}
+                    </button>
+                    <button
+                        onClick={handleStartScan}
+                        disabled={isCheckingQuality || !imageBase64}
+                        className="w-full flex items-center justify-center gap-2 px-4 py-3 font-semibold rounded-lg transition-all duration-300 ease-in-out bg-cyan-600 text-white hover:bg-cyan-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-900 focus:ring-cyan-500 disabled:bg-cyan-800 disabled:text-gray-400 disabled:cursor-not-allowed active:scale-[0.98]"
+                    >
+                        <ScannerIcon className="w-5 h-5" />
+                        {t('villager.analyzePhoto')}
+                    </button>
+                </div>
             </div>
              <div 
-                className={`bg-slate-900/50 backdrop-blur-xl rounded-2xl shadow-lg border border-red-500/20 p-6 flex flex-col items-center text-center transition-all duration-300 hover:bg-slate-800/60 hover:border-red-500/40 ${isAlertStatus ? 'animate-pulse-glow' : ''}`}
+                className={`bg-slate-900/50 backdrop-blur-xl rounded-2xl shadow-lg border border-red-500/20 p-6 flex flex-col items-center text-center transition-all duration-300 hover:border-red-500/40 ${isAlertStatus ? 'animate-crackling-glow' : 'shadow-red-500/10 shadow-[0_0_15px]'} hover:shadow-[0_0_25px_rgba(239,68,68,0.4)]`}
                 style={{'--glow-color': 'var(--red-rgb)'} as React.CSSProperties}
             >
                 <div className="mb-4 text-red-400"><PlusIcon className="w-10 h-10" /></div>
-                <h3 className="text-xl font-semibold text-red-300 tracking-wide">Report Symptoms</h3>
-                <p className="text-gray-400 mt-2 mb-4 text-sm flex-grow">Feeling unwell? Log your symptoms for a health worker.</p>
+                <h3 className="text-xl font-semibold text-red-300 tracking-wide">{t('villager.reportSymptoms')}</h3>
+                <p className="text-gray-400 mt-2 mb-4 text-sm flex-grow">{t('villager.reportSymptomsDesc')}</p>
                 <button
                     onClick={() => { setSymptomModalInitialNotes(''); setIsSymptomsModalOpen(true); }}
                     className="mt-auto w-full flex items-center justify-center gap-2 px-6 py-3 font-semibold rounded-lg transition-all duration-300 ease-in-out bg-red-600 text-white hover:bg-red-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-900 focus:ring-red-500 transform hover:scale-105 active:scale-[0.98] will-change-transform"
                 >
-                    Log Symptoms
+                    {t('villager.logSymptoms')}
                 </button>
             </div>
         </div>
@@ -246,7 +356,7 @@ const VillagerDashboard: React.FC = () => {
         <div className="bg-slate-900/50 backdrop-blur-xl rounded-2xl shadow-lg border border-cyan-500/20 p-6">
           <div className="flex items-center gap-3 mb-4">
             <div className="text-cyan-400"><BookOpenIcon /></div>
-            <h3 className="text-xl font-semibold text-cyan-300 tracking-wide">Safety Guides</h3>
+            <h3 className="text-xl font-semibold text-cyan-300 tracking-wide">{t('villager.safetyGuides')}</h3>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {safetyGuides}
@@ -258,7 +368,7 @@ const VillagerDashboard: React.FC = () => {
         onClick={() => setIsChatbotModalOpen(true)}
         className="fixed bottom-6 right-6 sm:bottom-8 sm:right-8 flex items-center justify-center gap-2 w-16 h-16 bg-purple-600 text-white rounded-full shadow-lg shadow-purple-500/20 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-4 focus:ring-offset-slate-900 transition-all duration-300 transform hover:scale-110 active:scale-100 animate-pulse-glow will-change-transform"
         style={{'--glow-color': '147, 51, 234'} as React.CSSProperties}
-        aria-label="Open AI Chatbot"
+        aria-label={t('villager.openAIChat')}
       >
         <SparklesIcon className="w-8 h-8"/>
       </button>

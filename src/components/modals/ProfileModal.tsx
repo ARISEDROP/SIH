@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import Modal from './Modal';
 import { UserProfile } from '../../types';
 import { CameraIcon, SaveIcon } from '../common/icons';
+import { useTranslation } from '../../hooks/useTranslation';
 
 interface ProfileModalProps {
   isOpen: boolean;
@@ -11,6 +12,7 @@ interface ProfileModalProps {
 }
 
 const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, user, onSave }) => {
+  const { t } = useTranslation();
   const [name, setName] = useState(user.name);
   const [village, setVillage] = useState(user.village);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
@@ -48,7 +50,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, user, onSa
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Edit Profile">
+    <Modal isOpen={isOpen} onClose={onClose} title={t('modals.editProfileTitle')}>
       <div className="p-6 space-y-6">
         <div className="flex flex-col items-center">
           <div className="relative group">
@@ -60,7 +62,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, user, onSa
             <button
               onClick={() => fileInputRef.current?.click()}
               className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity"
-              aria-label="Change profile picture"
+              aria-label={t('modals.changeProfilePic')}
             >
               <CameraIcon className="w-8 h-8" />
             </button>
@@ -75,7 +77,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, user, onSa
         </div>
 
         <div>
-          <label htmlFor="name" className="block text-sm font-medium text-cyan-200">Full Name</label>
+          <label htmlFor="name" className="block text-sm font-medium text-cyan-200">{t('modals.fullName')}</label>
           <input
             type="text"
             id="name"
@@ -86,7 +88,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, user, onSa
         </div>
 
         <div>
-          <label htmlFor="village" className="block text-sm font-medium text-cyan-200">Village</label>
+          <label htmlFor="village" className="block text-sm font-medium text-cyan-200">{t('modals.village')}</label>
           <input
             type="text"
             id="village"
@@ -98,11 +100,11 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, user, onSa
 
         <div className="pt-2 flex justify-end gap-4">
           <button onClick={onClose} className="px-4 py-2 text-sm font-semibold text-gray-300 bg-slate-700 rounded-lg hover:bg-slate-600 transition-colors">
-            Cancel
+            {t('modals.cancel')}
           </button>
           <button onClick={handleSave} className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-cyan-600 rounded-lg hover:bg-cyan-500 transition-colors">
             <SaveIcon className="w-4 h-4" />
-            Save Changes
+            {t('modals.saveChanges')}
           </button>
         </div>
       </div>

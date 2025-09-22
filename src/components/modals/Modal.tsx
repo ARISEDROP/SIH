@@ -18,7 +18,10 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }) => {
       role="dialog"
       style={{ animationDuration: '300ms' }}
     >
-      <div className="relative bg-slate-900/80 w-full max-w-lg m-4 rounded-2xl shadow-2xl border border-cyan-500/20 animate-fade-in-up" style={{ animationDuration: '300ms' }}>
+      <div
+        className="relative bg-slate-900/80 w-full max-w-lg m-4 rounded-2xl shadow-2xl border border-cyan-500/20 animate-fade-in-up animate-pulse-glow"
+        style={{ animationDuration: '300ms, 3s', '--glow-color': 'var(--cyan-rgb)' } as React.CSSProperties}
+      >
         <div className="flex justify-between items-center p-4 border-b border-slate-700">
           <h3 className="text-xl font-semibold text-white">{title}</h3>
           <button

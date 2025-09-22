@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { LogoutIcon, UserIcon, GlobeIcon, ChipIcon, BookOpenIcon, Settings2Icon, ChevronDownIcon, RadarIcon, InfoIcon, WifiOffIcon, HardDriveIcon } from './icons';
 import Logo from './Logo';
 import { useAppContext } from '../../context/AppContext';
+import { useTranslation } from '../../hooks/useTranslation';
 
 const Header: React.FC = () => {
   const {
@@ -20,12 +21,14 @@ const Header: React.FC = () => {
     offlineQueueCount = 0,
     openHardwareManual,
   } = useAppContext();
+  const { t } = useTranslation();
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isBluetoothSupported, setIsBluetoothSupported] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  const roleName = role === 'villager' ? 'Villager' : 'Health Worker';
+  const roleName = role === 'villager' ? t('login.villager') : t('login.healthWorker');
+  const dashboardTitle = role === 'villager' ? t('header.villagerDashboard') : t('header.healthWorkerDashboard');
   const { name: userName, avatar: userAvatar } = userProfile;
 
   useEffect(() => {
@@ -48,8 +51,8 @@ const Header: React.FC = () => {
       <div className="flex items-center gap-4">
         <Logo size="small" />
         <div className="hidden sm:block">
-          <h2 className="text-lg font-semibold text-white">{roleName} Dashboard</h2>
-          <p className="text-sm text-cyan-300">Aqua Guardian Project</p>
+          <h2 className="text-lg font-semibold text-white">{dashboardTitle}</h2>
+          <p className="text-sm text-cyan-300">{t('header.tagline')}</p>
         </div>
       </div>
       
@@ -68,7 +71,7 @@ const Header: React.FC = () => {
         )}
 
         <div className="relative" ref={menuRef}>
-          <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="flex items-center gap-3 bg-slate-900/50 backdrop-blur-xl p-2 rounded-full border border-slate-700 hover:border-cyan-500/50 transition-all duration-200 active:scale-95">
+          <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="flex items-center gap-3 bg-slate-900/50 backdrop-blur-xl p-2 rounded-full border border-slate-700 hover:border-cyan-500/50 transition-all duration-200 active:scale-95 hover:shadow-[0_0_15px_rgba(34,211,238,0.4)]">
             <img src={userAvatar} alt={userName} className="w-8 h-8 rounded-full" />
             <span className="hidden md:inline font-semibold text-white">{userName}</span>
             <ChevronDownIcon className={`w-5 h-5 text-gray-400 transition-transform duration-300 ${isMenuOpen ? 'rotate-180' : ''}`} />
@@ -82,19 +85,19 @@ const Header: React.FC = () => {
                   <p className="text-sm text-gray-400">{roleName}</p>
                 </div>
                 <div className="h-px bg-slate-700 my-1"></div>
-                <MenuItem icon={<UserIcon />} label="Edit Profile" onClick={() => { openProfileModal(); setIsMenuOpen(false); }} />
-                <MenuItem icon={<BookOpenIcon />} label="App Guide" onClick={() => { openAppGuide(); setIsMenuOpen(false); }} />
-                <MenuItem icon={<ChipIcon />} label="Device Health" onClick={() => { openDeviceHealth(); setIsMenuOpen(false); }} />
+                <MenuItem icon={<UserIcon />} label={t('header.editProfile')} onClick={() => { openProfileModal(); setIsMenuOpen(false); }} />
+                <MenuItem icon={<BookOpenIcon />} label={t('header.appGuide')} onClick={() => { openAppGuide(); setIsMenuOpen(false); }} />
+                <MenuItem icon={<ChipIcon />} label={t('header.deviceHealth')} onClick={() => { openDeviceHealth(); setIsMenuOpen(false); }} />
                  {role === 'health_worker' && (
-                    <MenuItem icon={<HardDriveIcon />} label="Storage Manager" onClick={() => { openStorageManager(); setIsMenuOpen(false); }} />
+                    <MenuItem icon={<HardDriveIcon />} label={t('header.storageManager')} onClick={() => { openStorageManager(); setIsMenuOpen(false); }} />
                 )}
                 {role === 'health_worker' && isBluetoothSupported && (
-                    <MenuItem icon={<Settings2Icon />} label="Hardware Settings" onClick={() => { openHardwareModal(); setIsMenuOpen(false); }} />
+                    <MenuItem icon={<Settings2Icon />} label={t('header.hardwareSettings')} onClick={() => { openHardwareModal(); setIsMenuOpen(false); }} />
                 )}
                 {role === 'health_worker' && (
-                    <MenuItem icon={<BookOpenIcon />} label="Hardware Manual" onClick={() => { openHardwareManual?.(); setIsMenuOpen(false); }} />
+                    <MenuItem icon={<BookOpenIcon />} label={t('header.hardwareManual')} onClick={() => { openHardwareManual?.(); setIsMenuOpen(false); }} />
                 )}
-                 <MenuItem icon={<InfoIcon />} label="About Aqua" onClick={() => { openAboutModal(); setIsMenuOpen(false); }} />
+                 <MenuItem icon={<InfoIcon />} label={t('header.aboutAqua')} onClick={() => { openAboutModal(); setIsMenuOpen(false); }} />
                 <div className="h-px bg-slate-700 my-1"></div>
                  <div className="p-2">
                     <div className="relative">
@@ -106,15 +109,16 @@ const Header: React.FC = () => {
                         >
                             <option value="en-US">English</option>
                             <option value="hi-IN">हिन्दी (Hindi)</option>
-                            <option value="ta-IN">தமிழ் (Tamil)</option>
                             <option value="as-IN">অসমীয়া (Assamese)</option>
+                            <option value="bn-IN">বাংলা (Bengali)</option>
+                            <option value="mni-IN">মণিপুরী (Manipuri)</option>
                         </select>
                          <ChevronDownIcon className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
                     </div>
                 </div>
 
                 <div className="h-px bg-slate-700 my-1"></div>
-                <MenuItem icon={<LogoutIcon />} label="Logout" onClick={logout} isDanger={true} />
+                <MenuItem icon={<LogoutIcon />} label={t('header.logout')} onClick={logout} isDanger={true} />
               </div>
             </div>
           )}

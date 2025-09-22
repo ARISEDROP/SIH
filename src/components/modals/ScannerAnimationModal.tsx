@@ -1,10 +1,12 @@
 import React from 'react';
+import { useTranslation } from '../../hooks/useTranslation';
 
 interface ScannerAnimationModalProps {
   isOpen: boolean;
 }
 
 const ScannerAnimationModal: React.FC<ScannerAnimationModalProps> = ({ isOpen }) => {
+  const { t } = useTranslation();
   if (!isOpen) return null;
 
   return (
@@ -47,7 +49,7 @@ const ScannerAnimationModal: React.FC<ScannerAnimationModalProps> = ({ isOpen })
                 </svg>
             </div>
         </div>
-        <p className="mt-8 text-xl font-semibold text-white tracking-widest animate-pulse">ANALYSING WATER SAMPLE...</p>
+        <p className="mt-8 text-xl font-semibold text-white tracking-widest animate-pulse">{t('modals.analyzing')}</p>
       </div>
     </>
   );

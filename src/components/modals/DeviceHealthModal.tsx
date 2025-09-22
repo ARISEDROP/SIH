@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Modal from './Modal';
 import { CpuIcon, MemoryStickIcon, BatteryChargingIcon, HardDriveIcon, WifiIcon, SaveIcon } from '../common/icons';
+import { useTranslation } from '../../hooks/useTranslation';
 
 interface DeviceInfo {
   cpuCores?: number;
@@ -17,6 +18,7 @@ interface DeviceHealthModalProps {
 }
 
 const DeviceHealthModal: React.FC<DeviceHealthModalProps> = ({ isOpen, onClose, offlineQueueCount }) => {
+  const { t } = useTranslation();
   const [deviceInfo, setDeviceInfo] = useState<DeviceInfo>({});
   const [isLoading, setIsLoading] = useState(true);
 
@@ -92,17 +94,17 @@ const DeviceHealthModal: React.FC<DeviceHealthModalProps> = ({ isOpen, onClose, 
           <div className="text-cyan-400 flex-shrink-0 w-6 h-6 flex items-center justify-center">{icon}</div>
           <div className="flex-grow min-w-0">
               <p className="text-sm text-gray-400">{title}</p>
-              {value ? <p className="font-semibold text-white truncate">{value}</p> : <p className="text-sm text-gray-500">Not Available</p>}
+              {value ? <p className="font-semibold text-white truncate">{value}</p> : <p className="text-sm text-gray-500">{t('modals.notAvailable')}</p>}
           </div>
            {subValue && <span className="text-xs font-medium bg-slate-700 text-cyan-200 px-2 py-1 rounded-full flex-shrink-0">{subValue}</span>}
       </div>
   );
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Device Health & System Info">
+    <Modal isOpen={isOpen} onClose={onClose} title={t('modals.deviceHealthTitle')}>
       <div className="p-6">
         <p className="text-sm text-gray-400 mb-6">
-            This provides an overview of your device's current status based on information available to the browser. This can be useful for field operations.
+            {t('modals.deviceHealthDescription')}
         </p>
         {isLoading ? (
             <div className="flex justify-center items-center h-48">
@@ -110,12 +112,12 @@ const DeviceHealthModal: React.FC<DeviceHealthModalProps> = ({ isOpen, onClose, 
             </div>
         ) : (
             <div className="space-y-3">
-                {renderInfoItem(<CpuIcon />, 'CPU', deviceInfo.cpuCores ? `${deviceInfo.cpuCores} Logical Cores` : undefined)}
-                {renderInfoItem(<MemoryStickIcon />, 'Device Memory', deviceInfo.memory ? `~${deviceInfo.memory} GB RAM` : undefined)}
-                {renderInfoItem(<BatteryChargingIcon />, 'Battery', deviceInfo.battery ? `${deviceInfo.battery.level}%` : undefined, deviceInfo.battery?.charging ? 'Charging' : 'Discharging')}
-                {renderInfoItem(<HardDriveIcon />, 'Browser Storage', deviceInfo.storage ? `${deviceInfo.storage.usage} / ${deviceInfo.storage.quota}`: undefined)}
-                {renderInfoItem(<WifiIcon />, 'Network', deviceInfo.connection?.type ? deviceInfo.connection.type.charAt(0).toUpperCase() + deviceInfo.connection.type.slice(1) : undefined, deviceInfo.connection?.effectiveType)}
-                {renderInfoItem(<SaveIcon />, 'App Storage', `${offlineQueueCount} reports queued for sync`)}
+                {renderInfoItem(<CpuIcon />, t('modals.cpu'), deviceInfo.cpuCores ? `${deviceInfo.cpuCores} ${t('modals.cpuCores')}` : undefined)}
+                {renderInfoItem(<MemoryStickIcon />, t('modals.memory'), deviceInfo.memory ? `~${deviceInfo.memory} ${t('modals.ram')}` : undefined)}
+                {renderInfoItem(<BatteryChargingIcon />, t('modals.battery'), deviceInfo.battery ? `${deviceInfo.battery.level}%` : undefined, deviceInfo.battery?.charging ? t('modals.charging') : t('modals.discharging'))}
+                {renderInfoItem(<HardDriveIcon />, t('modals.storage'), deviceInfo.storage ? `${deviceInfo.storage.usage} / ${deviceInfo.storage.quota}`: undefined)}
+                {renderInfoItem(<WifiIcon />, t('modals.network'), deviceInfo.connection?.type ? deviceInfo.connection.type.charAt(0).toUpperCase() + deviceInfo.connection.type.slice(1) : undefined, deviceInfo.connection?.effectiveType)}
+                {renderInfoItem(<SaveIcon />, t('modals.appStorage'), `${offlineQueueCount} ${t('modals.reportsQueued')}`)}
             </div>
         )}
       </div>

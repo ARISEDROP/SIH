@@ -1,5 +1,6 @@
 import React from 'react';
 import { WifiOffIcon, SyncIcon, CheckCircleIcon } from './icons';
+import { useTranslation } from '../../hooks/useTranslation';
 
 interface ConnectionStatusIndicatorProps {
     isOnline: boolean;
@@ -8,11 +9,12 @@ interface ConnectionStatusIndicatorProps {
 }
 
 const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps> = ({ isOnline, syncStatus, offlineQueueCount }) => {
+    const { t } = useTranslation();
     
     if (!isOnline) {
         const message = offlineQueueCount > 0 
-            ? `You are offline. ${offlineQueueCount} ${offlineQueueCount === 1 ? 'report' : 'reports'} saved.`
-            : "You are offline. Your work will be saved.";
+            ? t('header.offlineReportsSaved').replace('{count}', offlineQueueCount).replace('{plural}', offlineQueueCount === 1 ? 'report' : 'reports')
+            : t('header.offlineWorkSaved');
         return (
             <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 w-full max-w-sm px-4">
                  <div className="bg-yellow-900/80 backdrop-blur-md text-yellow-200 px-4 py-3 rounded-lg shadow-lg border border-yellow-500/30 flex items-center justify-center gap-3 animate-fade-in-up" style={{ animationDuration: '300ms' }}>
@@ -26,8 +28,8 @@ const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps> = ({ i
     switch (syncStatus) {
         case 'syncing':
             const syncMessage = offlineQueueCount > 0 
-                ? `Syncing ${offlineQueueCount} ${offlineQueueCount === 1 ? 'report' : 'reports'}...`
-                : 'Syncing offline data...';
+                ? t('header.syncingReports').replace('{count}', offlineQueueCount).replace('{plural}', offlineQueueCount === 1 ? 'report' : 'reports')
+                : t('header.syncingOfflineData');
             return (
                 <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 w-full max-w-sm px-4">
                     <div className="bg-slate-800/80 backdrop-blur-md text-white px-4 py-3 rounded-lg shadow-lg border border-cyan-500/30 flex items-center justify-center gap-3 animate-fade-in-up" style={{ animationDuration: '300ms' }}>
@@ -41,7 +43,7 @@ const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps> = ({ i
                 <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 w-full max-w-sm px-4">
                     <div className="bg-slate-800/80 backdrop-blur-md text-white px-4 py-3 rounded-lg shadow-lg border border-cyan-500/30 flex items-center justify-center gap-3 animate-fade-in-up" style={{ animationDuration: '300ms' }}>
                        <CheckCircleIcon className="w-5 h-5 text-emerald-400" />
-                       <p className="text-sm font-medium">All data is up to date.</p>
+                       <p className="text-sm font-medium">{t('header.dataUpToDate')}</p>
                     </div>
                 </div>
             );

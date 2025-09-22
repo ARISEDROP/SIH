@@ -1,9 +1,10 @@
-import { SymptomReport, Tip } from '../types';
+import { SymptomReport, Tip, MissingDataReport } from '../types';
 
 const OFFLINE_REPORTS_KEY = 'offlineSymptomReports';
 const ALL_REPORTS_KEY = 'symptomReports';
 const TIPS_KEY = 'quickActionTips';
 const FORECAST_CACHE_KEY = 'aquaForecastCache';
+const MISSING_DATA_REPORTS_KEY = 'missingDataReports';
 
 
 /**
@@ -71,6 +72,17 @@ export const saveTips = (tips: Tip[]): void => {
   saveToLocalStorage(TIPS_KEY, tips);
 }
 
+// --- Missing Data Reports ---
+export const getStoredMissingDataReports = (): MissingDataReport[] => {
+  return loadFromLocalStorage<MissingDataReport[]>(MISSING_DATA_REPORTS_KEY, []);
+};
+
+export const addMissingDataReport = (report: MissingDataReport): void => {
+  const reports = getStoredMissingDataReports();
+  saveToLocalStorage(MISSING_DATA_REPORTS_KEY, [...reports, report]);
+};
+
+
 // --- Storage Usage Calculation ---
 
 /**
@@ -79,7 +91,7 @@ export const saveTips = (tips: Tip[]): void => {
  */
 export const getLocalStorageUsage = (): number => {
     let totalBytes = 0;
-    const keys = [OFFLINE_REPORTS_KEY, ALL_REPORTS_KEY, TIPS_KEY, FORECAST_CACHE_KEY];
+    const keys = [OFFLINE_REPORTS_KEY, ALL_REPORTS_KEY, TIPS_KEY, FORECAST_CACHE_KEY, MISSING_DATA_REPORTS_KEY];
     for (const key of keys) {
         const item = localStorage.getItem(key);
         if (item) {
